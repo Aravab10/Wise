@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>WISE — Irrigation System Upgrade Decision Tool</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <div class="hlogo"><i class="ti ti-droplet-half-2"></i></div>
+    <div class="htext">
+      <h1>WISE — Irrigation System Upgrade Decision Tool</h1>
+      <p>Water & Irrigation Systems Evaluation &nbsp;·&nbsp; All 50 States &nbsp;·&nbsp; Version 2</p>
+    </div>
+    <div class="hbadge"><span class="hdot"></span>Live · EIA 2026 Data</div>
+  </div>
+</header>
+
+<main class="container">
+  <div class="grid">
+
+    <!-- ══ LEFT: INPUTS ══════════════════════════════════════ -->
+    <aside class="panel">
+      <div class="panel-hdr">
+        <i class="ti ti-adjustments-horizontal"></i>
+        <div>
+          <h2>Farm Inputs</h2>
+          <p><span class="atag">AUTO</span> fields fill automatically on selection</p>
+        </div>
+      </div>
+      <div class="fbody">
+
+        <!-- ─── A. FARM LOCATION ─────────────────────────── -->
+        <div class="slabel"><i class="ti ti-map-pin"></i>A. Farm Location</div>
+
+        <div class="frow">
+          <div class="field">
+            <label>State <span class="req">*</span></label>
+            <select id="state" onchange="onStateChange()">
+              <option value="">Select state...</option>
+              {% for s in states %}
+              <option value="{{ s }}">{{ s }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label>County <span class="req">*</span></label>
+            <select id="county" onchange="onCountyChange()" disabled>
+              <option value="">Select county...</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- ─── B. IRRIGATION SYSTEM ─────────────────────── -->
+        <div class="slabel" style="margin-top:18px"><i class="ti ti-engine"></i>B. Irrigation System</div>
+
+        <div class="frow">
+          <div class="field">
+            <label>Current System <span class="req">*</span></label>
+            <select id="current_system">
+              <option value="">Select...</option>
+              <option value="Flood">Flood</option>
+              <option value="Sprinkler">Sprinkler (Center Pivot)</option>
+              <option value="Drip">Drip</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Irrigation Source <span class="req">*</span></label>
+            <select id="irrigation_source" onchange="onIrrigationSourceChange()">
+              <option value="">Select...</option>
+              <option value="Groundwater">Groundwater</option>
+              <option value="Surface Water">Surface Water</option>
+            </select>
+            <div class="hint">Affects energy cost via well depth</div>
+          </div>
+        </div>
+
+        <div class="frow">
+          <div class="field">
+            <label>Field Area (acres) <span class="req">*</span></label>
+            <input type="number" id="acres" placeholder="e.g. 320" min="1"/>
+          </div>
+          <div class="field">
+            <label>Operating Pressure (psi)</label>
+            <input type="number" id="op_pressure" value="40" min="0"/>
+            <div class="hint">Default 40 psi</div>
+          </div>
+        </div>
+
+        <div class="frow" id="well-row">
+          <div class="field">
+            <label>Well Depth (ft)</label>
+            <input type="number" id="well_depth" value="200" min="0"/>
+            <div class="hint" id="well-hint">Groundwater only — leave 0 for surface water</div>
+          </div>
+          <div class="field">
+            <label>Pump Efficiency (%)</label>
+            <input type="number" id="pump_efficiency" value="75" min="1" max="100"/>
+            <div class="hint">Default 75%</div>
+          </div>
+        </div>
+
+        <div class="frow">
+          <div class="field">
+            <label>Energy Cost ($/kWh) <span class="atag">AUTO</span></label>
+            <input type="number" id="elec_rate" step="0.0001" placeholder="Auto-filled" readonly/>
+            <div class="hint" id="elec-source">EIA 2026 state rate</div>
+          </div>
+          <div class="field">
+            <label>Net Crop Water Req. (in/ac)</label>
+            <input type="number" id="net_crop_water" value="18" min="1" max="60"/>
+            <div class="hint">18 in/ac — USGS data (INPUTS!E53)</div>
+          </div>
+        </div>
+
+        <!-- ─── C. CROP & PRODUCTION ─────────────────────── -->
+        <div class="slabel" style="margin-top:18px"><i class="ti ti-wheat"></i>C. Crop & Production</div>
+
+        <div class="frow">
+          <div class="field">
+            <label>Crop Type <span class="req">*</span></label>
+            <select id="crop" onchange="onCropChange()">
+              <option value="">Select...</option>
+              <option value="Corn">Corn</option>
+              <option value="Soybeans">Soybeans</option>
+              <option value="Wheat">Wheat</option>
+              <option value="Sorghum">Sorghum</option>
+              <option value="Cotton">Cotton</option>
+              <option value="Potatoes">Potatoes</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Expected Yield (bu/ac) <span class="req">*</span></label>
+            <input type="number" id="yield_per_acre" placeholder="e.g. 180" min="1"/>
+            <div class="hint">Manual entry (NASS integration v3)</div>
+          </div>
+        </div>
+
+        <div class="frow">
+          <div class="field">
+            <label>Market Price ($/bu) <span class="atag">AUTO</span></label>
+            <input type="number" id="crop_price" step="0.001" placeholder="Auto-filled" readonly/>
+            <div class="hint" id="price-source">USDA NASS 5-yr avg</div>
+          </div>
+          <div class="field">
+            <label>Custom Price Override ($/bu)</label>
+            <input type="number" id="crop_price_override" step="0.001" placeholder="Optional"/>
+            <div class="hint">Overrides auto price if filled</div>
+          </div>
+        </div>
+
+        <div class="frow">
+          <div class="field">
+            <label>Base Production Cost ($/ac) <span class="atag">AUTO</span></label>
+            <input type="number" id="prod_cost" step="1" placeholder="Auto-filled" readonly/>
+            <div class="hint" id="prod-cost-source">USDA ERS 2025 — display only</div>
+          </div>
+          <div class="field">
+            <label>Custom Cost Override ($/ac)</label>
+            <input type="number" id="prod_cost_override" step="1" placeholder="Optional"/>
+            <div class="hint">Overrides USDA default if filled</div>
+          </div>
+        </div>
+
+        <div class="frow">
+          <div class="field">
+            <label>Irrigated?</label>
+            <select id="irrigated">
+              <option value="Yes">Yes</option>
+              <option value="No">No</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- ─── D. SCENARIO SETTINGS ──────────────────────── -->
+        <div class="slabel" style="margin-top:18px"><i class="ti ti-settings"></i>D. Scenario Settings</div>
+
+        <div class="field">
+          <label>Water Availability Scenario <span class="req">*</span></label>
+          <select id="water_scenario">
+            <option value="">Select...</option>
+            <option value="No Constraint">No Constraint — Full water availability</option>
+            <option value="Mild Constraint">Mild Constraint — 10% reduction</option>
+            <option value="Moderate Constraint">Moderate Constraint — 25% reduction</option>
+            <option value="Severe Constraint">Severe Constraint — 40% reduction</option>
+          </select>
+        </div>
+
+        <div class="frow">
+          <div class="field">
+            <label>Incentive / Cost Share (%)</label>
+            <input type="number" id="incentive_pct" value="0" min="0" max="100" step="5"/>
+            <div class="hint">0–100% subsidy (INPUTS!E47)</div>
+          </div>
+          <div class="field">
+            <label>Analysis Horizon (years)</label>
+            <input type="number" id="horizon" value="25" min="5" max="40"/>
+            <div class="hint">Default 25 yrs (INPUTS!E49)</div>
+          </div>
+        </div>
+
+        <div class="frow">
+          <div class="field">
+            <label>Discount Rate (%)</label>
+            <input type="number" id="discount_rate" value="4" min="0" max="20" step="0.5"/>
+            <div class="hint">Default 4% (INPUTS!E50)</div>
+          </div>
+          <div class="field">
+            <label>Energy Price Escalation (%/yr)</label>
+            <input type="number" id="energy_escalation" value="4" min="0" max="20" step="0.5"/>
+            <div class="hint">Default 4% (INPUTS!E51)</div>
+          </div>
+        </div>
+
+        <button class="calcbtn" onclick="runCalculation()">
+          <i class="ti ti-player-play"></i> Run Analysis
+        </button>
+        <div class="errmsg" id="errmsg" style="display:none"></div>
+
+      </div>
+    </aside>
+
+    <!-- ══ RIGHT: RESULTS ════════════════════════════════════ -->
+    <section class="panel">
+      <div class="panel-hdr">
+        <i class="ti ti-chart-bar"></i>
+        <div>
+          <h2>Analysis Results</h2>
+          <p>Economic comparison & upgrade recommendation</p>
+        </div>
+      </div>
+
+      <div class="empty" id="empty">
+        <i class="ti ti-adjustments-horizontal"></i>
+        <p>Fill in farm details on the left<br/>and click <strong>Run Analysis</strong></p>
+      </div>
+
+      <div id="results" style="display:none">
+        <div class="rbody">
+
+          <div class="reccard">
+            <div class="reclabel">Recommended Upgrade</div>
+            <div class="recval" id="recval"></div>
+            <div class="recpri">Priority: <span class="pribadge" id="pribadge"></span></div>
+            <div class="recrat" id="recrat"></div>
+          </div>
+
+          <div class="metrics">
+            <div class="mcard">
+              <div class="mval" id="m-savings"></div>
+              <div class="mlbl">Annual net savings</div>
+              <div class="msub">total field</div>
+            </div>
+            <div class="mcard">
+              <div class="mval" id="m-water"></div>
+              <div class="mlbl">Water savings</div>
+              <div class="msub">vs current system</div>
+            </div>
+            <div class="mcard">
+              <div class="mval" id="m-payback"></div>
+              <div class="mlbl">Payback period</div>
+              <div class="msub">years to break even</div>
+            </div>
+            <div class="mcard">
+              <div class="mval" id="m-npv"></div>
+              <div class="mlbl">NPV</div>
+              <div class="msub" id="m-npv-sub"></div>
+            </div>
+          </div>
+
+          <div class="baseline" id="baseline-box"></div>
+
+          <div class="ttitle">System Comparison</div>
+          <div class="twrap">
+            <table class="ctable">
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>System</th>
+                  <th>Efficiency</th>
+                  <th>Water Use (in/ac)</th>
+                  <th>Water Saved (%)</th>
+                  <th>Annual Savings ($)</th>
+                  <th>Investment ($)</th>
+                  <th>Payback</th>
+                  <th>NPV ($)</th>
+                </tr>
+              </thead>
+              <tbody id="ctbody"></tbody>
+            </table>
+          </div>
+
+          <div class="notebox" id="notebox"></div>
+
+        </div>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<script>
+// ─────────────────────────────────────────────────────────────
+// STATE MANAGEMENT — cascading autofill
+// When state changes → counties + elec rate update
+// When county changes → climate data fills
+// When crop changes → price + prod cost fill
+// ─────────────────────────────────────────────────────────────
+
+function onStateChange() {
+  const state = v('state');
+  const countyEl = document.getElementById('county');
+  countyEl.innerHTML = '<option value="">Loading...</option>';
+  countyEl.disabled = true;
+  clearAuto();
+  if (!state) return;
+
+  fetch(`/get_counties?state=${enc(state)}`)
+    .then(r => r.json())
+    .then(data => {
+      countyEl.innerHTML = '<option value="">Select county...</option>';
+      data.counties.forEach(c => {
+        const o = document.createElement('option');
+        o.value = c; o.textContent = c;
+        countyEl.appendChild(o);
+      });
+      countyEl.disabled = false;
+      if (data.elec_rate) {
+        document.getElementById('elec_rate').value = data.elec_rate;
+        document.getElementById('elec-source').textContent =
+          `EIA March 2026 · ${state} · $${data.elec_rate}/kWh`;
+      }
+    });
+}
+
+function onCountyChange() {
+  const state = v('state'), county = v('county'), crop = v('crop');
+  if (!county) return;
+  fetchCountyData(state, county, crop);
+}
+
+function onCropChange() {
+  const state = v('state'), county = v('county'), crop = v('crop');
+  if (!state || !crop) return;
+  fetchCountyData(state, county, crop);
+}
+
+function fetchCountyData(state, county, crop) {
+  fetch(`/get_county_data?state=${enc(state)}&county=${enc(county)}&crop=${enc(crop)}`)
+    .then(r => r.json())
+    .then(data => {
+      // Electricity rate
+      if (data.elec_rate) {
+        document.getElementById('elec_rate').value = data.elec_rate;
+        document.getElementById('elec-source').textContent = data.data_sources.elec;
+      }
+      // Crop market price (USDA NASS)
+      if (data.crop_price) {
+        document.getElementById('crop_price').value = data.crop_price;
+        document.getElementById('price-source').textContent = data.data_sources.price;
+      }
+      // Base production cost (USDA ERS)
+      if (data.prod_cost) {
+        document.getElementById('prod_cost').value = data.prod_cost;
+        document.getElementById('prod-cost-source').textContent =
+          data.data_sources.prod_cost + ' — display only, not in NPV';
+      }
+    });
+}
+
+// When irrigation source changes → toggle well depth
+function onIrrigationSourceChange() {
+  const src = v('irrigation_source');
+  const wellDepth = document.getElementById('well_depth');
+  const wellRow   = document.getElementById('well-row');
+  if (src === 'Surface Water') {
+    wellDepth.value    = 0;
+    wellDepth.disabled = true;
+    wellRow.style.opacity = '0.45';
+    document.getElementById('well-hint').textContent = 'Not applicable for surface water';
+  } else {
+    wellDepth.disabled = false;
+    wellRow.style.opacity = '1';
+    if (!wellDepth.value || wellDepth.value === '0') wellDepth.value = 200;
+    document.getElementById('well-hint').textContent = 'Groundwater only — leave 0 for surface water';
+  }
+}
+
+function clearAuto() {
+  ['elec_rate','crop_price','prod_cost'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// CALCULATION
+// ─────────────────────────────────────────────────────────────
+
+function runCalculation() {
+  const inputs = {
+    state:                v('state'),
+    county:               v('county'),
+    current_system:       v('current_system'),
+    irrigation_source:    v('irrigation_source') || 'Groundwater',
+    crop:                 v('crop'),
+    acres:                v('acres'),
+    yield_per_acre:       v('yield_per_acre'),
+    water_scenario:       v('water_scenario'),
+    well_depth:           v('well_depth') || 200,
+    op_pressure:          v('op_pressure') || 40,
+    pump_efficiency:      parseFloat(v('pump_efficiency') || 75) / 100,
+    net_crop_water:       v('net_crop_water') || 18,
+    // Override takes priority over auto-filled if provided
+    crop_price_override:  v('crop_price_override') || null,
+    prod_cost_override:   v('prod_cost_override')  || null,
+    irrigated:            v('irrigated') || 'Yes',
+    incentive_pct:        parseFloat(v('incentive_pct') || 0) / 100,
+    horizon:              v('horizon') || 25,
+    discount_rate:        parseFloat(v('discount_rate') || 4) / 100,
+    energy_escalation:    parseFloat(v('energy_escalation') || 4) / 100,
+  };
+
+  const missing = ['state','county','current_system','irrigation_source',
+                   'crop','acres','yield_per_acre','water_scenario']
+    .filter(f => !inputs[f]);
+  if (missing.length) { showErr('Please fill in: ' + missing.join(', ')); return; }
+  hideErr();
+
+  const btn = document.querySelector('.calcbtn');
+  btn.innerHTML = '<i class="ti ti-loader-2 spin"></i> Calculating...';
+  btn.disabled  = true;
+
+  fetch('/calculate', {
+    method:  'POST',
+    headers: {'Content-Type': 'application/json'},
+    body:    JSON.stringify(inputs)
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) { showErr(data.error); return; }
+    displayResults(data, inputs);
+  })
+  .catch(() => showErr('Calculation failed. Please try again.'))
+  .finally(() => {
+    btn.innerHTML = '<i class="ti ti-player-play"></i> Run Analysis';
+    btn.disabled  = false;
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// DISPLAY RESULTS
+// ─────────────────────────────────────────────────────────────
+
+function displayResults(data, inputs) {
+  document.getElementById('empty').style.display   = 'none';
+  document.getElementById('results').style.display = 'block';
+
+  const km      = data.key_metrics;
+  const b       = data.baseline;
+  const horizon = inputs.horizon || 25;
+
+  // Recommendation card
+  document.getElementById('recval').textContent = data.recommended_system;
+  document.getElementById('recrat').textContent = data.rationale;
+  const pb = document.getElementById('pribadge');
+  pb.textContent = data.priority;
+  pb.className   = 'pribadge pri-' + data.priority.toLowerCase();
+
+  // Key metrics
+  document.getElementById('m-savings').textContent  = '$' + fmt(km.annual_net_savings);
+  document.getElementById('m-water').textContent    = km.water_saved_pct + '%';
+  document.getElementById('m-payback').textContent  = km.payback_label;
+  document.getElementById('m-npv').textContent      = '$' + fmt(km.npv);
+  document.getElementById('m-npv-sub').textContent  = `${horizon}-yr horizon`;
+
+  // Baseline info box — includes irrigation source + climate data + prod cost
+  const climateStr = b.et
+    ? `ET: ${b.et} in · Precip: ${b.precip} in · Temp: ${b.temp}°F · AWS: ${b.aws} in`
+    : 'Climate data: not available';
+
+  document.getElementById('baseline-box').innerHTML = `
+    <strong>Baseline (${b.system} · ${b.irrigation_src}):</strong>
+    Applied water: ${b.applied_water} in/ac &nbsp;·&nbsp;
+    TDH: ${b.tdh} ft &nbsp;·&nbsp;
+    Energy cost: $${fmt(b.energy_cost)}/yr &nbsp;·&nbsp;
+    Elec: $${b.elec_rate}/kWh &nbsp;·&nbsp;
+    Crop price: $${b.crop_price}/bu &nbsp;·&nbsp;
+    Prod cost: $${fmt(b.crop_cost)}/ac (display only) &nbsp;·&nbsp;
+    Water reduction: ${b.water_reduction}% &nbsp;·&nbsp;
+    ${climateStr} · ${b.climate_source}
+  `;
+
+  // Comparison table
+  const tbody = document.getElementById('ctbody');
+  tbody.innerHTML = '';
+  data.results.forEach(r => {
+    const tr = document.createElement('tr');
+    if (r.recommended) tr.classList.add('recrow');
+    tr.innerHTML = `
+      <td><span class="rbadge r${Math.min(r.rank,3)}">${r.rank_label}</span></td>
+      <td>${r.recommended ? '★ ' : ''}${r.system}</td>
+      <td>${r.efficiency_pct}%</td>
+      <td>${r.applied_water}</td>
+      <td>${r.water_saved_pct}%</td>
+      <td>$${fmt(r.annual_net_savings)}</td>
+      <td>$${fmt(r.net_investment)}</td>
+      <td>${r.payback_label}</td>
+      <td class="${r.npv > 0 ? 'pos' : 'neg'}">$${fmt(r.npv)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Data source note
+  document.getElementById('notebox').innerHTML = `
+    <i class="ti ti-info-circle"></i>
+    <span>
+      ${inputs.acres} acres · ${inputs.county} County, ${inputs.state} ·
+      ${inputs.crop} · ${inputs.irrigation_source} ·
+      ${horizon}-yr horizon · ${parseFloat(inputs.discount_rate)*100}% discount ·
+      ${parseFloat(inputs.energy_escalation)*100}% energy escalation ·
+      Elec: $${b.elec_rate}/kWh (EIA March 2026) ·
+      Crop price: $${b.crop_price}/bu (USDA NASS) ·
+      Prod cost shown for context only — not included in NPV ranking.
+    </span>`;
+
+  document.getElementById('results').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// ─────────────────────────────────────────────────────────────
+// UTILITIES
+// ─────────────────────────────────────────────────────────────
+
+const v   = id => document.getElementById(id)?.value;
+const enc = s  => encodeURIComponent(s);
+const fmt = n  => Number(n).toLocaleString();
+
+function showErr(msg) {
+  const el = document.getElementById('errmsg');
+  el.textContent = msg; el.style.display = 'block';
+}
+function hideErr() {
+  document.getElementById('errmsg').style.display = 'none';
+}
+</script>
+</body>
+</html>
