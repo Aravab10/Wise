@@ -30,11 +30,11 @@
       <button class="nav-pill" id="nav-results" type="button" onclick="showScreen('results')">Results Dashboard</button>
     </nav>
 
-    <button class="help-btn" type="button" onclick="openMethodology()">
-      <span class="material-symbols-outlined">help</span>
-      <span>Methodology</span>
-    </button>
-  </div>
+    <div class="header-actions">
+      <button class="logo-btn" type="button" onclick="openMethodology()" aria-label="Open methodology">
+        <img class="msu-logo" src="{{ url_for('static', filename='msu.png') }}" alt="Michigan State University"/>
+      </button>
+    </div>
 </header>
 
 <!-- HOME / WELCOME -->
@@ -48,6 +48,11 @@
     </div>
     <h1>Is Your Irrigation System<br/>Worth the Investment?</h1>
     <p>Get a location-specific evaluation of irrigation upgrades to save water, energy, and money — powered by the same economics model you already trust.</p>
+    <button class="learn-more-tab" type="button" onclick="openMethodology()">
+      <span class="material-symbols-outlined">menu_book</span>
+      Explore How WISE Works
+      <span class="material-symbols-outlined">arrow_forward</span>
+    </button>
     <button class="primary-cta" type="button" onclick="showScreen('evaluation')">
       Start Free Evaluation
       <span class="material-symbols-outlined">arrow_forward</span>
@@ -359,6 +364,19 @@
         <div class="metric-card"><span class="metric-icon gold material-symbols-outlined">schedule</span><div><small>Payback period</small><strong id="m-payback"></strong><span>Years to break even</span></div></div>
       </div>
 
+      <div class="chart-grid">
+        <section class="results-card chart-card">
+          <div class="results-card-head"><div><span class="eyebrow">System comparison</span><h3>25-Year NPV by System</h3></div><span class="material-symbols-outlined">bar_chart</span></div>
+          <div class="horizontal-chart" id="npv-chart" aria-label="25-year NPV by irrigation system"></div>
+          <div class="chart-axis-label">25-Year Net Present Value (USD)</div>
+        </section>
+        <section class="results-card chart-card">
+          <div class="results-card-head"><div><span class="eyebrow">System comparison</span><h3>Water Savings by System</h3></div><span class="material-symbols-outlined">water_drop</span></div>
+          <div class="horizontal-chart" id="water-savings-chart" aria-label="Water savings by irrigation system"></div>
+          <div class="chart-axis-label">Water Savings (%)</div>
+        </section>
+      </div>
+
       <div class="results-grid">
         <section class="results-card comparison-card">
           <div class="results-card-head"><div><span class="eyebrow">Ranked options</span><h3>System Comparison</h3></div><span class="material-symbols-outlined">leaderboard</span></div>
@@ -405,7 +423,15 @@
 </div>
 
 <footer class="site-footer">
-  <div class="footer-inner"><div class="footer-brand"><span class="material-symbols-outlined fill">water_drop</span><div><strong>WISE</strong><small>Water & Irrigation Systems Evaluation</small></div></div><div class="footer-copy">Engineering financial modeling · EIA · USDA NASS · © 2026 WISE</div></div>
+  <div class="footer-inner">
+    <div class="footer-brand"><span class="material-symbols-outlined fill">water_drop</span><div><strong>WISE</strong><small>Water & Irrigation Systems Evaluation</small></div></div>
+    <div class="footer-links" aria-label="Footer links">
+      <a href="#" onclick="return false;">About us</a>
+      <a href="#" onclick="return false;">Contact</a>
+      <a href="#" onclick="return false;">Resources</a>
+    </div>
+    <div class="footer-copy">Engineering financial modeling · EIA · USDA NASS · © 2026 WISE</div>
+  </div>
 </footer>
 
 <nav class="mobile-nav" aria-label="Mobile navigation">
@@ -736,7 +762,114 @@ function displayResults(data, inputs) {
   document.getElementById('notebox').innerHTML = `
     <span class="material-symbols-outlined">info</span>
     <span><strong>Model context</strong><br>${inputs.acres} acres · ${inputs.county} County, ${inputs.state} · ${inputs.crop} · ${b.irrigation_src} · ${b.energy_src} · ${horizon}-yr horizon · ${parseFloat(inputs.discount_rate)*100}% discount.<br><small>Production cost is shown for context only and is not used in the NPV ranking.</small></span>`;
+
+  renderComparisonCharts(data.results);
 }
+
+// =========================================================
+// Results charts — replaces renderComparisonCharts() and
+// renderHorizontalBarChart() in your <script> block.
+// Paste over both functions; keep everything else as-is.
+// =========================================================
+
+const SYSTEM_ORDER = ['Center Pivot', 'Improved Sprinkler', 'Drip'];
+
+const pctLabel     = v => (v > 0 ? '+' : '') + Number(v).toFixed(1) + '%';
+const pctTick      = v => v === 0 ? '0%' : (v > 0 ? '+' : '\u2212') + Math.abs(Math.round(v)) + '%';
+const moneyShort   = v => {
+  const a = Math.abs(v);
+  const s = v < 0 ? '\u2212' : (v > 0 ? '+' : '');
+  return a >= 1000 ? `${s}$${Math.round(a / 1000)}k` : `${s}$${Math.round(a)}`;
+};
+
+// Round the axis out to a clean step so bars never touch the edge.
+function niceDomain(values) {
+  let min = Math.min(0, ...values);
+  let max = Math.max(0, ...values);
+  if (min === 0 && max === 0) return [0, 1];
+  const step = Math.pow(10, Math.floor(Math.log10(max - min))) / 2;
+  min = Math.floor(min / step) * step;
+  max = Math.ceil(max / step) * step;
+  return [min, max === min ? min + step : max];
+}
+
+function renderComparisonCharts(results) {
+  const rows = [...results].sort((a, b) => {
+    const ia = SYSTEM_ORDER.indexOf(a.system);
+    const ib = SYSTEM_ORDER.indexOf(b.system);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+  });
+
+  renderHorizontalBarChart('npv-chart', rows, 'npv', 'npv', signedMoney, moneyShort);
+  renderHorizontalBarChart('water-savings-chart', rows, 'water_saved_pct', 'water', pctLabel, pctTick);
+}
+
+function renderHorizontalBarChart(containerId, results, field, kind, formatValue, formatTick) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const rows = (results || []).filter(r => isFinite(Number(r[field])));
+  if (!rows.length) {
+    container.innerHTML = '<p class="hchart-empty">Run an evaluation to see this comparison.</p>';
+    return;
+  }
+
+  const [lo, hi] = niceDomain(rows.map(r => Number(r[field])));
+  const span    = (hi - lo) || 1;
+  const pct     = v => ((v - lo) / span) * 100;
+  const zeroPct = pct(0);
+  const ticks   = [...new Set([lo, 0, hi])].sort((a, b) => a - b);
+
+  const gridLines = ticks
+    .filter(t => t !== 0)
+    .map(t => `<span class="hbar-grid" style="left:${pct(t)}%"></span>`)
+    .join('');
+
+  container.innerHTML = `
+    <div class="hchart-plot">
+      ${rows.map(r => {
+        const value    = Number(r[field]);
+        const valuePct = pct(value);
+        const left     = Math.min(zeroPct, valuePct);
+        const width    = Math.abs(valuePct - zeroPct);
+
+        const sign = value === 0 ? 'neutral' : (value < 0 ? 'negative' : 'positive');
+        const tone = value === 0 ? 'zero' : `${kind}-${sign}`;
+        // Label sits inside the bar when there's room, otherwise just past its end.
+        const place = width >= 28
+          ? (value < 0 ? 'in-left'  : 'in-right')
+          : (value < 0 ? 'out-left' : 'out-right');
+
+        return `
+        <div class="hbar-row">
+          <div class="hbar-name">${r.system}</div>
+          <div class="hbar-area" title="${r.system}: ${formatValue(value)}">
+            ${gridLines}
+            <span class="hbar-zero" style="left:${zeroPct}%"></span>
+            <div class="hbar ${tone}" data-width="${width}" style="left:${left}%">
+              <span class="hbar-value ${place} ${sign}">${formatValue(value)}</span>
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+
+      <div class="hchart-scale">
+        <div></div>
+        <div class="hchart-scale-track">
+          ${ticks.map((t, i) => `
+            <span class="hchart-tick${i === 0 ? ' first' : ''}${i === ticks.length - 1 ? ' last' : ''}"
+                  style="left:${pct(t)}%">${formatTick(t)}</span>`).join('')}
+        </div>
+      </div>
+    </div>`;
+
+  requestAnimationFrame(() => {
+    container.querySelectorAll('.hbar').forEach(bar => {
+      bar.style.width = bar.dataset.width + '%';
+    });
+  });
+}
+
 
 const v = id => document.getElementById(id)?.value;
 const enc = s => encodeURIComponent(s);
