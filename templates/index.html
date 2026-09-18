@@ -128,6 +128,7 @@
               <label for="current_system">Current System <span class="req">*</span></label>
               <select id="current_system">
                 <option value="">Select...</option>
+                <option value="None">No Irrigation</option>
                 <option value="Flood">Flood</option>
                 <option value="Sprinkler">Sprinkler (Center Pivot)</option>
                 <option value="Drip">Drip</option>
@@ -142,6 +143,13 @@
                 <option value="Groundwater + Surface Water">Groundwater + Surface Water</option>
               </select>
               <div class="hint">Affects total dynamic head and energy cost.</div>
+            </div>
+          </div>
+          <div class="frow" id="surface-water-row" style="display:none">
+            <div class="field">
+              <label for="surface_water_distance">Distance from Surface Water (ft)</label>
+              <input type="number" id="surface_water_distance" placeholder="e.g. 150" min="0"/>
+              <div class="hint">Distance from the surface water source to the field.</div>
             </div>
           </div>
           <div class="frow">
@@ -163,6 +171,22 @@
             <div class="field">
               <label for="pump_efficiency">Pump Efficiency (%)</label>
               <input type="number" id="pump_efficiency" value="75" min="1" max="100"/>
+            </div>
+          </div>
+          <div class="frow">
+            <div class="field">
+              <label for="pump_capacity">Pump Capacity (GPM)</label>
+              <select id="pump_capacity">
+                <option value="">Select...</option>
+                {% for g in range(100, 2001, 50) %}<option value="{{ g }}">{{ g }} GPM</option>{% endfor %}
+              </select>
+            </div>
+            <div class="field">
+              <label for="system_age">Irrigation System Age (years)</label>
+              <select id="system_age">
+                <option value="">Select...</option>
+                {% for a in range(0, 31) %}<option value="{{ a }}">{{ a }}</option>{% endfor %}
+              </select>
             </div>
           </div>
 
@@ -290,6 +314,7 @@
 
           <div class="form-actions">
             <button class="secondary-btn" type="button" onclick="showScreen('home')"><span class="material-symbols-outlined">arrow_back</span>Back</button>
+            <button class="secondary-btn" type="button" onclick="resetForm()"><span class="material-symbols-outlined">restart_alt</span>Reset</button>
             <button class="calcbtn" type="button" onclick="runCalculation()"><span class="material-symbols-outlined">analytics</span>Calculate My Recommendation</button>
           </div>
         </div>
@@ -461,7 +486,7 @@ function openMethodology() { document.getElementById('methodology-modal').style.
 function closeMethodology() { document.getElementById('methodology-modal').style.display = 'none'; }
 function modalBackdropClose(event) { if (event.target.id === 'methodology-modal') closeMethodology(); }
 
-function startNewEvaluation() {
+function resetForm() {
   document.querySelectorAll('#screen-evaluation input:not([readonly])').forEach(input => {
     if (input.id === 'op_pressure') input.value = 40;
     else if (input.id === 'well_depth') input.value = 200;
@@ -473,14 +498,23 @@ function startNewEvaluation() {
     else if (input.id === 'energy_escalation') input.value = 4;
     else if (input.type !== 'range') input.value = '';
   });
-  ['state','county','current_system','irrigation_source','crop','water_scenario'].forEach(id => {
+  ['state','county','current_system','irrigation_source','crop','water_scenario','pump_capacity','system_age'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   document.getElementById('energy_source').value = 'Electricity';
   document.getElementById('county').disabled = true;
   document.getElementById('county').innerHTML = '<option value="">Select county...</option>';
   document.getElementById('blend-row').style.display = 'none';
-  clearAuto(); hideErr();
+  document.getElementById('surface-water-row').style.display = 'none';
+  const wellDepth = document.getElementById('well_depth');
+  wellDepth.disabled = false;
+  document.getElementById('well-row').style.opacity = '1';
+  document.getElementById('well-hint').textContent = 'Groundwater only';
+  clearAuto(); hideErr(); clearInvalid();
+}
+
+function startNewEvaluation() {
+  resetForm();
   document.getElementById('results').style.display = 'none';
   document.getElementById('empty').style.display = 'flex';
   showScreen('evaluation');
@@ -549,7 +583,9 @@ function onIrrigationSourceChange() {
   const wellDepth = document.getElementById('well_depth');
   const wellRow = document.getElementById('well-row');
   const blendRow = document.getElementById('blend-row');
+  const surfaceWaterRow = document.getElementById('surface-water-row');
   blendRow.style.display = 'none';
+  surfaceWaterRow.style.display = (src === 'Surface Water' || src === 'Groundwater + Surface Water') ? 'grid' : 'none';
 
   if (src === 'Surface Water') {
     wellDepth.value = 0;
@@ -628,6 +664,23 @@ function clearAuto() {
 }
 
 // ─────────────────────────────────────────────────────────
+// VALIDATION — red outline on incomplete required fields
+// ─────────────────────────────────────────────────────────
+function markInvalid(ids) {
+  ids.forEach(id => {
+    document.getElementById(id)?.closest('.field')?.classList.add('invalid');
+  });
+}
+function clearInvalid() {
+  document.querySelectorAll('#screen-evaluation .field.invalid').forEach(f => f.classList.remove('invalid'));
+}
+document.querySelectorAll('#screen-evaluation select, #screen-evaluation input').forEach(el => {
+  ['input', 'change'].forEach(evt => el.addEventListener(evt, () => {
+    if (v(el.id)) el.closest('.field')?.classList.remove('invalid');
+  }));
+});
+
+// ─────────────────────────────────────────────────────────
 // CALCULATION — payload preserved for app.py
 // ─────────────────────────────────────────────────────────
 function runCalculation() {
@@ -641,6 +694,7 @@ function runCalculation() {
     current_system: v('current_system'),
     irrigation_source: v('irrigation_source') || 'Groundwater',
     gw_blend: parseFloat(v('gw_blend') || 100) / 100,
+    surface_water_distance: v('surface_water_distance') || null,
     energy_source: v('energy_source') || 'Electricity',
     crop: v('crop'),
     acres: v('acres'),
@@ -649,6 +703,8 @@ function runCalculation() {
     well_depth: v('well_depth') || 200,
     op_pressure: v('op_pressure') || 40,
     pump_efficiency: parseFloat(v('pump_efficiency') || 75) / 100,
+    pump_capacity: v('pump_capacity') || null,
+    system_age: v('system_age') || null,
     net_crop_water: v('net_crop_water') || 18,
     crop_price_override: null,
     prod_cost_override: v('prod_cost_override') || null,
@@ -658,9 +714,15 @@ function runCalculation() {
     energy_escalation: parseFloat(v('energy_escalation') || 4) / 100,
   };
 
+  clearInvalid();
   const missing = ['state','county','current_system','irrigation_source','energy_source','crop','acres','water_scenario'].filter(f => !inputs[f]);
-  if (missing.length) { showErr('Please fill in: ' + missing.join(', ')); return; }
+  if (missing.length) {
+    markInvalid(missing);
+    showErr('Please fill in: ' + missing.join(', '));
+    return;
+  }
   if (!finalYield || parseFloat(finalYield) <= 0) {
+    markInvalid(['yield_per_acre']);
     showErr('Please enter a yield value (bu/ac) — county data unavailable, use custom yield field.');
     return;
   }

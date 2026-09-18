@@ -156,8 +156,13 @@ def calculate_wise(inputs):
     tdh = well_depth + (op_pressure * 2.31)
 
     # Baseline energy cost — Excel Results_calc H2
-    baseline_water  = net_crop_water / current_eff
-    baseline_energy = baseline_water * acres * tdh * 0.0853 / pump_eff * energy_rate
+    # "No Irrigation" (dryland) has no existing pumping, so no baseline water or energy cost.
+    if current_sys == 'None':
+        baseline_water  = 0.0
+        baseline_energy = 0.0
+    else:
+        baseline_water  = net_crop_water / current_eff
+        baseline_energy = baseline_water * acres * tdh * 0.0853 / pump_eff * energy_rate
 
     results = []
     for sys_name, specs in UPGRADE_SYSTEMS.items():
@@ -232,7 +237,7 @@ def calculate_wise(inputs):
         r['rank_label']  = "Not recommended" if r['npv'] <= 0 else str(i + 1)
 
     baseline = {
-        "system":           current_sys,
+        "system":           "No Irrigation" if current_sys == 'None' else current_sys,
         "irrigation_src":   irrigation_src,
         "gw_blend_pct":     round(gw_blend * 100) if irrigation_src == 'Groundwater + Surface Water' else None,
         "energy_src":       energy_src,
