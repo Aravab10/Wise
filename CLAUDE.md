@@ -43,7 +43,7 @@ early December).
 | Gross-vs-net warning | `INPUTS!AE84:AE87` | 20% tolerance |
 
 ## Commands
-- Setup: `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt`
+- Setup: `python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt`
 - Regenerate data: `.venv/bin/python scripts/generate_data.py`
 - Parity test: `.venv/bin/python -m pytest tests -v`
 - Run app: `.venv/bin/python app.py` → http://localhost:5000
