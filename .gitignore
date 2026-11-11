@@ -19,3 +19,7 @@ instance/
 # Editor
 .vscode/
 .idea/
+
+# Local virtualenv
+.venv/
+.pytest_cache/
