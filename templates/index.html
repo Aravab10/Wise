@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>WISE — Water & Irrigation Systems Evaluation</title>
 <meta name="description" content="Evaluate irrigation upgrades using regional energy, crop, yield, and climate data."/>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23012d1d' d='M12 2C8 7 5 10.5 5 14a7 7 0 0 0 14 0c0-3.5-3-7-7-12z'/%3E%3C/svg%3E"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -12,6 +13,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"/>
 </head>
 <body>
+{%- macro pct(x) -%}{{ '%g' % (x * 100) }}%{%- endmacro -%}
 
 <!-- Application header -->
 <header class="app-header">
@@ -35,6 +37,7 @@
         <img class="msu-logo" src="{{ url_for('static', filename='msu.png') }}" alt="Michigan State University"/>
       </button>
     </div>
+  </div>
 </header>
 
 <!-- HOME / WELCOME -->
@@ -46,26 +49,26 @@
       <span class="material-symbols-outlined fill">water_drop</span>
       Agricultural Water & Energy Optimization
     </div>
-    <h1>Is Your Irrigation System<br/>Worth the Investment?</h1>
-    <p>Get a location-specific evaluation of irrigation upgrades to save water, energy, and money — powered by the same economics model you already trust.</p>
+    <h1>How well would an irrigation system pay?</h1>
+    <p>Get a location-specific evaluation of irrigation upgrades to save water, energy, and money — powered by the same economic data you already trust.</p>
     <button class="learn-more-tab" type="button" onclick="openMethodology()">
       <span class="material-symbols-outlined">menu_book</span>
       Explore How WISE Works
       <span class="material-symbols-outlined">arrow_forward</span>
     </button>
     <button class="primary-cta" type="button" onclick="showScreen('evaluation')">
-      Start Free Evaluation
+      Use the Free Tool
       <span class="material-symbols-outlined">arrow_forward</span>
     </button>
 
     <div class="hero-features">
       <article>
         <span class="material-symbols-outlined">savings</span>
-        <div><strong>25-Year NPV</strong><p>Ranks upgrades using discounted cash-flow economics.</p></div>
+        <div><strong>Lifetime NPV</strong><p>Ranks upgrades with discounted cash flows, replacement, and salvage.</p></div>
       </article>
       <article>
         <span class="material-symbols-outlined">opacity</span>
-        <div><strong>Water Conservation</strong><p>Compares applied water and percent savings by system.</p></div>
+        <div><strong>Water Constraints</strong><p>Screens each system against your water supply scenario.</p></div>
       </article>
       <article>
         <span class="material-symbols-outlined">database</span>
@@ -80,232 +83,310 @@
   <main class="page-shell">
     <div class="page-intro">
       <div>
-        <span class="eyebrow">Farm evaluation</span>
+        <span class="eyebrow">Irrigation Upgrade Studio</span>
         <h1>Tell us about your farm</h1>
-        <p>Enter the details that drive pumping energy, water use, investment cost, and long-term return.</p>
+        <p id="intro-msg">Configure the farm, irrigation system, crop, and scenario - then compare upgrade options.</p>
       </div>
-      <div class="data-badge"><span class="live-dot"></span> Live data · EIA 2026 · USDA NASS</div>
+      <div class="data-badge"><span class="live-dot"></span> Live data · EIA · USDA NASS</div>
     </div>
 
-    <div class="step-strip" aria-label="Evaluation progress">
-      <div class="step active"><span>1</span><div><strong>Farm details</strong><small>Location & system</small></div></div>
+    <div class="step-strip" aria-label="Evaluation sections">
+      <div class="step active"><span>1</span><div><strong>Farm &amp; location</strong><small>State, county, area</small></div></div>
       <div class="step-line"></div>
-      <div class="step active"><span>2</span><div><strong>Regional assumptions</strong><small>Auto-filled + editable</small></div></div>
+      <div class="step active"><span>2</span><div><strong>System</strong><small>Pumping &amp; energy</small></div></div>
       <div class="step-line"></div>
-      <div class="step"><span>3</span><div><strong>Results</strong><small>NPV & recommendation</small></div></div>
+      <div class="step active"><span>3</span><div><strong>Crop</strong><small>Yield, price, water</small></div></div>
+      <div class="step-line"></div>
+      <div class="step active"><span>4</span><div><strong>Scenario</strong><small>Water &amp; investment</small></div></div>
     </div>
 
     <div class="evaluation-layout">
-      <section class="form-card">
+      <section class="form-card" id="wise-form">
         <div class="card-heading">
           <span class="heading-icon material-symbols-outlined">agriculture</span>
-          <div><h2>Farm Details</h2><p>Required fields are marked with an asterisk. Regional values populate as you select your location and crop.</p></div>
+          <div><h2>Farm Details</h2><p>Fields marked <span class="req">*</span> are required. Regional values fill automatically; enter a custom value to override.</p></div>
         </div>
 
         <div class="form-body">
-          <!-- A. FARM LOCATION -->
-          <div class="section-heading"><span class="material-symbols-outlined">location_on</span><div><b>Farm Location</b><small>Used to select county-level climate and state energy data.</small></div></div>
+          <!-- 1 FARM & LOCATION -->
+          <div class="section-heading"><span class="material-symbols-outlined">location_on</span><div><b>1 · Farm &amp; Location</b><small>County-level climate and terrain values update automatically from your location.</small></div></div>
           <div class="frow">
             <div class="field">
               <label for="state">State <span class="req">*</span></label>
-              <select id="state" onchange="onStateChange()">
+              <select id="state" data-input>
                 <option value="">Select state...</option>
-                {% for s in states %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+                {% for s in lists.states %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
               </select>
             </div>
             <div class="field">
               <label for="county">County <span class="req">*</span></label>
-              <select id="county" onchange="onCountyChange()" disabled>
-                <option value="">Select county...</option>
+              <select id="county" data-input disabled>
+                <option value="">Select a state first</option>
               </select>
             </div>
           </div>
-
-          <!-- B. IRRIGATION SYSTEM -->
-          <div class="section-heading"><span class="material-symbols-outlined">water</span><div><b>Irrigation System</b><small>Defines your baseline efficiency, lift, pressure, and pumping conditions.</small></div></div>
           <div class="frow">
             <div class="field">
-              <label for="current_system">Current System <span class="req">*</span></label>
-              <select id="current_system">
+              <label for="acres">Field area (acres) <span class="req">*</span></label>
+              <input type="number" id="acres" data-input placeholder="e.g. 130" min="0.01" max="1000000" step="any"/>
+              <div class="hint">Area irrigated with one system.</div>
+            </div>
+            <div class="field auto-field">
+              <label>County climate <span class="atag">AUTO</span></label>
+              <div class="climate-strip" id="climate-strip">Select a state and county</div>
+            </div>
+          </div>
+
+          <!-- 2 IRRIGATION SYSTEM -->
+          <div class="section-heading"><span class="material-symbols-outlined">water</span><div><b>2 · Irrigation System</b><small id="system-note">Engineering inputs feed the pumping-energy and upgrade calculations.</small></div></div>
+          <div class="frow">
+            <div class="field">
+              <label for="current_system">Current system <span class="req">*</span></label>
+              <select id="current_system" data-input>
                 <option value="">Select...</option>
-                <option value="None">No Irrigation</option>
-                <option value="Flood">Flood</option>
-                <option value="Sprinkler">Sprinkler (Center Pivot)</option>
-                <option value="Drip">Drip</option>
+                {% for s in lists.current_systems %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
               </select>
+              <div class="hint" id="current-eff-hint">Options come from SystemTech (Role = Current).</div>
             </div>
             <div class="field">
-              <label for="irrigation_source">Irrigation Source <span class="req">*</span></label>
-              <select id="irrigation_source" onchange="onIrrigationSourceChange()">
-                <option value="">Select...</option>
-                <option value="Groundwater">Groundwater</option>
-                <option value="Surface Water">Surface Water</option>
-                <option value="Groundwater + Surface Water">Groundwater + Surface Water</option>
+              <label for="system_age">System age (years)</label>
+              <select id="system_age" data-input>
+                <option value="">Optional</option>
+                {% for a in lists.system_age %}<option value="{{ a }}">{{ a }}{% if loop.last %}+{% endif %}</option>{% endfor %}
               </select>
-              <div class="hint">Affects total dynamic head and energy cost.</div>
+              <div class="hint">If older than 30 years, enter 30. Not used in calculations.</div>
+            </div>
+          </div>
+          <div class="frow">
+            <div class="field">
+              <label for="pumping_capacity_gpm">Pumping capacity (gpm)</label>
+              <select id="pumping_capacity_gpm" data-input>
+                <option value="">Optional</option>
+                {% for g in lists.well_capacity_gpm %}<option value="{{ g }}">{{ g }} gpm</option>{% endfor %}
+              </select>
+              <div class="hint">At operating condition. Not used in calculations.</div>
+            </div>
+            <div class="field">
+              <label for="irrigation_source">Irrigation source <span class="req" data-pump-req>*</span></label>
+              <select id="irrigation_source" data-input>
+                <option value="">Select...</option>
+                {% for s in lists.irrigation_sources %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+              </select>
+              <div class="hint">Surface water has no well lift in total dynamic head.</div>
             </div>
           </div>
           <div class="frow" id="surface-water-row" style="display:none">
             <div class="field">
-              <label for="surface_water_distance">Distance from Surface Water (ft)</label>
-              <input type="number" id="surface_water_distance" placeholder="e.g. 150" min="0"/>
-              <div class="hint">Distance from the surface water source to the field.</div>
+              <label for="surface_water_distance">Distance from surface water (ft)</label>
+              <input type="number" id="surface_water_distance" data-input placeholder="Optional" min="0"/>
+              <div class="hint">For your records. Not used in the v6 calculations.</div>
             </div>
           </div>
           <div class="frow">
-            <div class="field">
-              <label for="acres">Field Area (acres) <span class="req">*</span></label>
-              <input type="number" id="acres" placeholder="e.g. 320" min="1"/>
+            <div class="field" id="well-field">
+              <label for="well_depth_ft">Well depth (ft) <span class="req" data-pump-req>*</span></label>
+              <input type="number" id="well_depth_ft" data-input placeholder="e.g. 150" min="0" max="2000" step="any"/>
+              <div class="hint" id="well-hint">Depth to pumping water level.</div>
             </div>
             <div class="field">
-              <label for="op_pressure">Operating Pressure (psi)</label>
-              <input type="number" id="op_pressure" value="40" min="0"/>
-            </div>
-          </div>
-          <div class="frow" id="well-row">
-            <div class="field">
-              <label for="well_depth">Well Depth (ft)</label>
-              <input type="number" id="well_depth" value="200" min="0"/>
-              <div class="hint" id="well-hint">Groundwater only</div>
-            </div>
-            <div class="field">
-              <label for="pump_efficiency">Pump Efficiency (%)</label>
-              <input type="number" id="pump_efficiency" value="75" min="1" max="100"/>
-            </div>
-          </div>
-          <div class="frow">
-            <div class="field">
-              <label for="pump_capacity">Pump Capacity (GPM)</label>
-              <select id="pump_capacity">
+              <label for="operating_pressure_psi">Operating pressure (psi) <span class="req" data-pump-req>*</span></label>
+              <select id="operating_pressure_psi" data-input>
                 <option value="">Select...</option>
-                {% for g in range(100, 2001, 50) %}<option value="{{ g }}">{{ g }} GPM</option>{% endfor %}
+                {% for p in lists.operating_pressure_psi %}<option value="{{ p }}" {% if p == 40 %}selected{% endif %}>{{ p }} psi</option>{% endfor %}
               </select>
+              <div class="hint">Default 40 psi; override if known.</div>
             </div>
+          </div>
+          <div class="frow">
             <div class="field">
-              <label for="system_age">Irrigation System Age (years)</label>
-              <select id="system_age">
+              <label for="pump_efficiency">Pump efficiency <span class="req" data-pump-req>*</span></label>
+              <select id="pump_efficiency" data-input>
                 <option value="">Select...</option>
-                {% for a in range(0, 31) %}<option value="{{ a }}">{{ a }}</option>{% endfor %}
+                {% for e in lists.pump_efficiency %}<option value="{{ e }}" {% if e == 0.75 %}selected{% endif %}>{{ pct(e) }}</option>{% endfor %}
               </select>
-            </div>
-          </div>
-
-          <div class="blend-card" id="blend-row" style="display:none">
-            <div class="blend-head"><label for="gw_blend">Water Source Mix</label><span class="material-symbols-outlined">tune</span></div>
-            <input type="range" id="gw_blend" min="0" max="100" value="50" step="5" oninput="updateBlendLabel()"/>
-            <div class="hint centered" id="blend-label">50% groundwater · 50% surface water</div>
-          </div>
-
-          <!-- ENERGY -->
-          <div class="section-heading"><span class="material-symbols-outlined">bolt</span><div><b>Energy</b><small>WISE uses the selected state's electricity or natural-gas price.</small></div></div>
-          <div class="frow">
-            <div class="field">
-              <label for="energy_source">Energy Source <span class="req">*</span></label>
-              <select id="energy_source" onchange="onEnergySourceChange()">
-                <option value="Electricity">Electricity</option>
-                <option value="Natural Gas">Natural Gas</option>
-              </select>
-              <div class="hint">Selects the correct state price.</div>
+              <div class="hint">Default 75%; override if known.</div>
             </div>
             <div class="field auto-field">
-              <label for="energy_rate">Energy Price <span class="atag">AUTO</span></label>
-              <input type="number" id="energy_rate" step="0.0001" placeholder="Auto-filled" readonly/>
-              <div class="hint" id="energy-rate-source">Select state and energy source</div>
+              <label for="tdh">Total dynamic head (ft) <span class="atag">AUTO</span></label>
+              <input type="text" id="tdh" readonly placeholder="Auto-calculated"/>
+              <div class="hint">Well depth + pressure × 2.31 ft/psi.</div>
             </div>
           </div>
-          <div class="frow one-col-mobile">
-            <div class="field">
-              <label for="net_crop_water">Net Crop Water Requirement (in/ac)</label>
-              <input type="number" id="net_crop_water" value="18" min="1" max="60"/>
-              <div class="hint">18 in/ac — USGS (INPUTS!E53)</div>
-            </div>
-          </div>
-
-          <!-- C. CROP & PRODUCTION -->
-          <div class="section-heading"><span class="material-symbols-outlined">grass</span><div><b>Crop & Production</b><small>Market price, production cost, and county yield are pulled from the model data.</small></div></div>
           <div class="frow">
             <div class="field">
-              <label for="crop">Crop Type <span class="req">*</span></label>
-              <select id="crop" onchange="onCropChange()">
+              <label for="energy_source">Energy source <span class="req" data-pump-req>*</span></label>
+              <select id="energy_source" data-input>
                 <option value="">Select...</option>
-                <option value="Corn">Corn</option>
-                <option value="Soybeans">Soybeans</option>
-                <option value="Wheat">Wheat</option>
-                <option value="Sorghum">Sorghum</option>
-                <option value="Cotton">Cotton</option>
-                <option value="Potatoes">Potatoes</option>
+                {% for s in lists.energy_sources %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
               </select>
             </div>
             <div class="field auto-field">
-              <label for="crop_price">Market Price ($/bu) <span class="atag">AUTO</span></label>
-              <input type="number" id="crop_price" step="0.001" placeholder="Auto-filled" readonly/>
-              <div class="hint" id="price-source">USDA NASS 5-yr avg</div>
+              <label for="energy_price">Energy cost <span class="atag">AUTO</span></label>
+              <input type="text" id="energy_price" readonly placeholder="Auto-filled"/>
+              <div class="hint" id="energy-hint">Select state and energy source.</div>
+            </div>
+          </div>
+
+          <!-- 3 CROP & PRODUCTION -->
+          <div class="section-heading"><span class="material-symbols-outlined">grass</span><div><b>3 · Crop &amp; Production</b><small>Yield and price come from USDA NASS at the best available data level.</small></div></div>
+          <div class="frow">
+            <div class="field">
+              <label for="crop">Crop type <span class="req">*</span></label>
+              <select id="crop" data-input>
+                <option value="">Select...</option>
+                {% for c in lists.crops %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="field" id="rainfed-field" style="display:none">
+              <label for="rainfed_yield">Rainfed yield <span class="unit-tag" data-yield-unit></span> <span class="req">*</span></label>
+              <input type="number" id="rainfed_yield" data-input placeholder="Current dryland yield" min="0" step="any"/>
+              <div class="hint">Irrigation benefit = (expected − rainfed yield) × price × acres.</div>
             </div>
           </div>
 
           <div class="frow">
             <div class="field auto-field">
-              <label for="county_yield">County Yield (bu/ac) <span class="atag">AUTO</span></label>
-              <input type="number" id="county_yield" step="0.1" placeholder="Auto-filled from NASS" readonly/>
-              <div class="hint" id="county-yield-source">Select state, county, and crop</div>
+              <label for="yield_auto">Expected yield <span class="unit-tag" data-yield-unit></span> <span class="atag" id="yield-level">AUTO</span></label>
+              <input type="text" id="yield_auto" readonly placeholder="Auto-filled from NASS"/>
             </div>
             <div class="field">
-              <label for="yield_per_acre">Custom Yield Override (bu/ac)</label>
-              <input type="number" id="yield_per_acre" step="0.1" placeholder="Enter custom yield if needed"/>
-              <div class="hint" id="yield-hint">Enter here if county data unavailable or to override.</div>
+              <label for="custom_yield">Custom yield</label>
+              <input type="number" id="custom_yield" data-input placeholder="Optional override" min="0" max="100000" step="any"/>
             </div>
           </div>
-
-          <div class="yield-msg" id="yield-msg" style="display:none">
-            <span class="material-symbols-outlined">info</span>
-            <span id="yield-msg-text"></span>
-          </div>
+          <div class="data-msg" id="yield-msg"><span class="material-symbols-outlined">info</span><span></span></div>
 
           <div class="frow">
             <div class="field auto-field">
-              <label for="prod_cost">Base Production Cost ($/ac) <span class="atag">AUTO</span></label>
-              <input type="number" id="prod_cost" step="1" placeholder="Auto-filled" readonly/>
-              <div class="hint">USDA ERS 2025 — display only.</div>
+              <label for="price_auto">Market price <span class="unit-tag" id="price-unit"></span> <span class="atag" id="price-level">AUTO</span></label>
+              <input type="text" id="price_auto" readonly placeholder="Auto-filled from NASS"/>
             </div>
             <div class="field">
-              <label for="prod_cost_override">Custom Cost Override ($/ac)</label>
-              <input type="number" id="prod_cost_override" step="1" placeholder="Optional"/>
+              <label for="custom_price">Custom price</label>
+              <input type="number" id="custom_price" data-input placeholder="Optional override" min="0" step="any"/>
             </div>
           </div>
+          <div class="data-msg" id="price-msg"><span class="material-symbols-outlined">info</span><span></span></div>
 
-          <!-- D. SCENARIO SETTINGS -->
-          <div class="section-heading"><span class="material-symbols-outlined">settings</span><div><b>Scenario Settings</b><small>Fine-tune investment, financing, and future energy assumptions.</small></div></div>
-          <div class="field">
-            <label for="water_scenario">Water Availability Scenario <span class="req">*</span></label>
-            <select id="water_scenario">
-              <option value="">Select...</option>
-              <option value="No Constraint">No Constraint — Full availability</option>
-              <option value="Mild Constraint">Mild Constraint — 10% reduction</option>
-              <option value="Moderate Constraint">Moderate Constraint — 25% reduction</option>
-              <option value="Severe Constraint">Severe Constraint — 40% reduction</option>
-            </select>
+          <div class="frow">
+            <div class="field auto-field">
+              <label for="prod_cost_auto">Production cost ($/ac) <span class="atag" id="prod-level">AUTO</span></label>
+              <input type="text" id="prod_cost_auto" readonly placeholder="Auto-filled"/>
+            </div>
+            <div class="field">
+              <label for="custom_prod_cost">Custom cost</label>
+              <input type="number" id="custom_prod_cost" data-input placeholder="Optional override" min="0" step="any"/>
+            </div>
           </div>
+          <div class="data-msg" id="prod-msg"><span class="material-symbols-outlined">info</span><span></span></div>
+
+          <div class="frow">
+            <div class="field">
+              <label for="irrigated">Irrigated? <span class="req">*</span></label>
+              <select id="irrigated" data-input>
+                <option value="">Select...</option>
+                {% for b in lists.binary %}<option value="{{ b }}">{{ b }}</option>{% endfor %}
+              </select>
+              <div class="hint" id="irrigated-hint">Select Yes or No to indicate whether this field is currently irrigated.</div>
+            </div>
+            <div class="field">
+              <label for="gross_irrigation_in"><span id="gross-label">Gross irrigation applied</span> (in/ac/yr) <span class="req">*</span></label>
+              <select id="gross_irrigation_in" data-input disabled>
+                <option value="">Select...</option>
+                {% for g in lists.gross_irrigation_in %}<option value="{{ g }}">{{ g }} in</option>{% endfor %}
+              </select>
+              <div class="hint" id="gross-hint">Requires Irrigated? = Yes.</div>
+            </div>
+          </div>
+          <div class="frow">
+            <div class="field">
+              <label for="net_crop_water_in">Net crop water requirement (in/ac) <span class="req">*</span></label>
+              <input type="number" id="net_crop_water_in" data-input placeholder="e.g. 12" min="0" max="200" step="any"/>
+            </div>
+            <div class="field auto-field">
+              <label for="current_net">Current net irrigation (in/ac) <span class="atag">AUTO</span></label>
+              <input type="text" id="current_net" readonly placeholder="n/a"/>
+              <div class="hint" id="current-net-hint">Net = gross × current system efficiency.</div>
+            </div>
+          </div>
+          <div class="data-msg" id="net-msg"><span class="material-symbols-outlined">info</span><span></span></div>
+
+          <!-- 4 SCENARIO & INVESTMENT -->
+          <div class="section-heading"><span class="material-symbols-outlined">settings</span><div><b>4 · Scenario &amp; Investment</b><small>Scenario settings control the water constraint and investment comparison.</small></div></div>
+          <div class="frow">
+            <div class="field">
+              <label for="water_scenario">Water supply scenario <span class="req">*</span></label>
+              <select id="water_scenario" data-input>
+                <option value="">Select...</option>
+                {% for s in lists.water_scenarios %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+              </select>
+              <div class="hint" id="scenario-hint">Select a water supply scenario to set the reduction from current supply.</div>
+            </div>
+            <div class="field" id="custom-reduction-field" style="display:none">
+              <label for="custom_reduction">Custom reduction (%) <span class="req">*</span></label>
+              <input type="number" id="custom_reduction" data-input data-percent placeholder="0–100" min="0" max="100" step="any"/>
+            </div>
+            <div class="field auto-field" id="available-field">
+              <label for="available_water">Available irrigation water <span class="atag">AUTO</span></label>
+              <input type="text" id="available_water" readonly placeholder="in/ac/yr"/>
+              <div class="hint" id="available-hint">Calculates once gross/planned irrigation is set.</div>
+            </div>
+          </div>
+          <div class="frow">
+            <div class="field">
+              <label for="upgrade_scenario">Upgrade scenario <span class="req">*</span></label>
+              <select id="upgrade_scenario" data-input>
+                <option value="">Select...</option>
+                {% for s in lists.upgrade_systems %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+              </select>
+              <div class="hint" id="same-system-hint">Options come from SystemTech (Role = Upgrade).</div>
+            </div>
+            <div class="field auto-field">
+              <label for="upgrade_cost">Estimated upgrade cost ($/ac) <span class="atag" id="cost-level">AUTO</span></label>
+              <input type="text" id="upgrade_cost" readonly placeholder="SystemTech budget"/>
+            </div>
+          </div>
+          <div class="frow">
+            <div class="field">
+              <label for="custom_upgrade_cost">Custom upgrade cost ($/ac)</label>
+              <input type="number" id="custom_upgrade_cost" data-input placeholder="Optional — dealer quote" min="0" max="20000" step="any"/>
+              <div class="hint">Leave blank to use the SystemTech budget for the selected upgrade.</div>
+            </div>
+            <div class="field">
+              <label for="incentive">Incentive / cost share <span class="req">*</span></label>
+              <select id="incentive" data-input>
+                <option value="">Select...</option>
+                {% for x in lists.incentive %}<option value="{{ x }}">{{ pct(x) }}</option>{% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="data-msg" id="cost-msg"><span class="material-symbols-outlined">info</span><span></span></div>
 
           <div class="assumption-box">
-            <div class="assumption-title"><span class="material-symbols-outlined">finance</span><div><strong>Financial assumptions</strong><small>Defaults mirror the current WISE model and remain editable.</small></div></div>
+            <div class="assumption-title"><span class="material-symbols-outlined">finance</span><div><strong>Financial assumptions</strong><small id="finance-hint">Set analysis horizon and discount rate to enable the investment comparison.</small></div></div>
             <div class="frow">
               <div class="field">
-                <label for="incentive_pct">Incentive / Cost Share (%)</label>
-                <input type="number" id="incentive_pct" value="0" min="0" max="100" step="5"/>
+                <label for="horizon_yr">Analysis horizon (years) <span class="req">*</span></label>
+                <select id="horizon_yr" data-input>
+                  <option value="">Select...</option>
+                  {% for h in lists.analysis_horizon %}<option value="{{ h }}">{{ h }} years</option>{% endfor %}
+                </select>
               </div>
               <div class="field">
-                <label for="horizon">Analysis Horizon (years)</label>
-                <input type="number" id="horizon" value="25" min="5" max="40"/>
+                <label for="discount_rate">Discount rate <span class="req">*</span></label>
+                <select id="discount_rate" data-input>
+                  <option value="">Select...</option>
+                  {% for d in lists.discount_rate %}<option value="{{ d }}">{{ pct(d) }}</option>{% endfor %}
+                </select>
               </div>
             </div>
             <div class="frow">
               <div class="field">
-                <label for="discount_rate">Discount Rate (%)</label>
-                <input type="number" id="discount_rate" value="4" min="0" max="20" step="0.5"/>
-              </div>
-              <div class="field">
-                <label for="energy_escalation">Energy Price Escalation (%/yr)</label>
-                <input type="number" id="energy_escalation" value="4" min="0" max="20" step="0.5"/>
+                <label for="energy_escalation">Energy escalation (%/yr) <span class="req">*</span></label>
+                <select id="energy_escalation" data-input>
+                  <option value="">Select...</option>
+                  {% for g in lists.energy_escalation %}<option value="{{ g }}">{{ pct(g) }}</option>{% endfor %}
+                </select>
               </div>
             </div>
           </div>
@@ -315,29 +396,28 @@
           <div class="form-actions">
             <button class="secondary-btn" type="button" onclick="showScreen('home')"><span class="material-symbols-outlined">arrow_back</span>Back</button>
             <button class="secondary-btn" type="button" onclick="resetForm()"><span class="material-symbols-outlined">restart_alt</span>Reset</button>
-            <button class="calcbtn" type="button" onclick="runCalculation()"><span class="material-symbols-outlined">analytics</span>Calculate My Recommendation</button>
+            <button class="calcbtn" id="calcbtn" type="button" onclick="runCalculation()"><span class="material-symbols-outlined">analytics</span>Calculate My Recommendation</button>
           </div>
         </div>
       </section>
 
       <aside class="side-panel">
         <div class="side-card sticky-card">
-          <div class="side-icon material-symbols-outlined">verified</div>
+          <div class="readiness" id="readiness">
+            <span class="material-symbols-outlined">pending</span>
+            <strong id="readiness-text">Checking inputs…</strong>
+          </div>
+          <ul class="missing-list" id="missing-list"></ul>
+          <div class="mini-divider"></div>
           <h3>What WISE evaluates</h3>
-          <p>Every option is measured against your current system using the same backend model.</p>
+          <p>Every option is measured against your current system using the v6 workbook model.</p>
           <div class="check-list">
-            <div><span class="material-symbols-outlined">check_circle</span>Center Pivot</div>
-            <div><span class="material-symbols-outlined">check_circle</span>Improved Sprinkler</div>
-            <div><span class="material-symbols-outlined">check_circle</span>Drip</div>
+            {% for s in evaluated_systems %}<div><span class="material-symbols-outlined">check_circle</span>{{ s }} · {{ pct(system_tech[s].efficiency) }} efficient</div>{% endfor %}
           </div>
           <div class="mini-divider"></div>
-          <div class="side-stat"><span>Ranking basis</span><strong>25-year NPV</strong></div>
+          <div class="side-stat"><span>Ranking basis</span><strong>NPV of water-feasible upgrades</strong></div>
           <div class="side-stat"><span>Model outputs</span><strong>Savings · Water · Payback</strong></div>
-          <div class="side-stat"><span>Data coverage</span><strong>All 50 states</strong></div>
-        </div>
-        <div class="side-card data-card">
-          <span class="material-symbols-outlined">database</span>
-          <div><strong>Regional data built in</strong><p>EIA energy prices, USDA crop prices/yields, and county climate data are loaded automatically.</p></div>
+          <div class="side-stat"><span>Data coverage</span><strong>All 50 states + DC</strong></div>
         </div>
       </aside>
     </div>
@@ -351,7 +431,7 @@
       <div>
         <span class="eyebrow">Evaluation complete</span>
         <h1>Your Irrigation Upgrade Analysis</h1>
-        <p>Systems are ranked by net present value using your farm inputs and current WISE model assumptions.</p>
+        <p>Upgrades are screened for eligibility and your water constraint, then ranked by net present value.</p>
       </div>
       <button class="secondary-btn" type="button" onclick="showScreen('evaluation')"><span class="material-symbols-outlined">tune</span>Adjust Inputs</button>
     </div>
@@ -366,34 +446,36 @@
     <div id="results" style="display:none">
       <div class="recommendation-hero">
         <div class="recommendation-copy">
-          <span class="result-kicker">Top recommendation</span>
+          <span class="result-kicker">Recommended upgrade</span>
           <div class="recommendation-title-row">
             <div>
               <h2 id="recval"></h2>
-              <div class="recpri">Investment outlook <span class="pribadge" id="pribadge"></span></div>
+              <div class="recpri">Priority level <span class="pribadge" id="pribadge"></span></div>
             </div>
-            <div class="worth-badge" id="worth-badge"><span class="material-symbols-outlined">trending_up</span><span id="worth-text">Worth considering</span></div>
+            <div class="worth-badge" id="worth-badge"><span class="material-symbols-outlined">trending_up</span><span id="worth-text"></span></div>
           </div>
+          <p class="status-line" id="status-line"></p>
           <p class="recrat" id="recrat"></p>
         </div>
         <div class="npv-spotlight">
-          <span>25-year NPV</span>
+          <span id="m-npv-label">NPV</span>
           <strong id="m-npv"></strong>
           <small id="m-npv-sub"></small>
         </div>
       </div>
 
-      <div class="metric-grid">
-        <div class="metric-card"><span class="metric-icon material-symbols-outlined">savings</span><div><small>Annual net savings</small><strong id="m-savings"></strong><span>Total field</span></div></div>
-        <div class="metric-card"><span class="metric-icon blue material-symbols-outlined">opacity</span><div><small>Water savings</small><strong id="m-water"></strong><span>vs current system</span></div></div>
-        <div class="metric-card"><span class="metric-icon gold material-symbols-outlined">schedule</span><div><small>Payback period</small><strong id="m-payback"></strong><span>Years to break even</span></div></div>
+      <div class="metric-grid metric-grid-4">
+        <div class="metric-card"><span class="metric-icon material-symbols-outlined">savings</span><div><small>Annual net savings</small><strong id="m-savings"></strong><span>$/year, total field</span></div></div>
+        <div class="metric-card"><span class="metric-icon blue material-symbols-outlined">opacity</span><div><small>Water savings</small><strong id="m-water"></strong><span id="m-water-sub">vs current system</span></div></div>
+        <div class="metric-card"><span class="metric-icon material-symbols-outlined">payments</span><div><small>User-paid investment</small><strong id="m-invest"></strong><span id="m-invest-sub">after cost share</span></div></div>
+        <div class="metric-card"><span class="metric-icon gold material-symbols-outlined">schedule</span><div><small>Payback period</small><strong id="m-payback"></strong><span>years to break even</span></div></div>
       </div>
 
       <div class="chart-grid">
         <section class="results-card chart-card">
-          <div class="results-card-head"><div><span class="eyebrow">System comparison</span><h3>25-Year NPV by System</h3></div><span class="material-symbols-outlined">bar_chart</span></div>
-          <div class="horizontal-chart" id="npv-chart" aria-label="25-year NPV by irrigation system"></div>
-          <div class="chart-axis-label">25-Year Net Present Value (USD)</div>
+          <div class="results-card-head"><div><span class="eyebrow">System comparison</span><h3 id="npv-chart-title">NPV by System</h3></div><span class="material-symbols-outlined">bar_chart</span></div>
+          <div class="horizontal-chart" id="npv-chart" aria-label="NPV by irrigation system"></div>
+          <div class="chart-axis-label">Net Present Value (USD)</div>
         </section>
         <section class="results-card chart-card">
           <div class="results-card-head"><div><span class="eyebrow">System comparison</span><h3>Water Savings by System</h3></div><span class="material-symbols-outlined">water_drop</span></div>
@@ -404,10 +486,10 @@
 
       <div class="results-grid">
         <section class="results-card comparison-card">
-          <div class="results-card-head"><div><span class="eyebrow">Ranked options</span><h3>System Comparison</h3></div><span class="material-symbols-outlined">leaderboard</span></div>
+          <div class="results-card-head"><div><span class="eyebrow">System comparison table</span><h3>All Options</h3></div><span class="material-symbols-outlined">leaderboard</span></div>
           <div class="table-wrap">
             <table class="ctable">
-              <thead><tr><th>Rank</th><th>System</th><th>Efficiency</th><th>Water Use</th><th>Water Saved</th><th>Annual Savings</th><th>Investment</th><th>Payback</th><th>NPV</th></tr></thead>
+              <thead><tr><th>Rank</th><th>System</th><th>Water Use</th><th>Water Savings</th><th>Energy Cost</th><th>Annual Net Savings</th><th>Investment</th><th>NPV</th><th>Payback</th><th>Decision</th></tr></thead>
               <tbody id="ctbody"></tbody>
             </table>
           </div>
@@ -415,7 +497,7 @@
 
         <aside class="results-side">
           <div class="results-card baseline-card">
-            <div class="results-card-head"><div><span class="eyebrow">Current operation</span><h3>Baseline Snapshot</h3></div><span class="material-symbols-outlined">monitoring</span></div>
+            <div class="results-card-head"><div><span class="eyebrow">Scenario summary</span><h3>Baseline Snapshot</h3></div><span class="material-symbols-outlined">monitoring</span></div>
             <div class="baseline" id="baseline-box"></div>
           </div>
           <div class="notebox" id="notebox"></div>
@@ -438,10 +520,11 @@
       <button type="button" onclick="closeMethodology()" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
     </div>
     <div class="methodology-content">
-      <section><h3>1. Applied Water</h3><p>Applied water is calculated as net crop water requirement divided by irrigation-system efficiency. Baseline efficiency comes from the current system and each upgrade uses its SystemTech efficiency.</p></section>
-      <section><h3>2. Total Dynamic Head & Pump Energy</h3><p>Total dynamic head uses effective well depth plus operating pressure × 2.31. Groundwater uses full well depth, surface water uses zero well depth, and a mixed source scales well depth by the groundwater fraction.</p></section>
-      <section><h3>3. Annual Net Savings</h3><p>WISE compares baseline and upgrade pumping energy cost, then subtracts each upgrade's annual operation and maintenance cost across the full field.</p></section>
-      <section><h3>4. NPV & Payback</h3><p>NPV uses the model's growing-annuity treatment of annual net savings, discount rate, energy-price escalation, and analysis horizon, then subtracts net investment after incentives. Payback is net investment divided by annual net savings when recovery occurs within the selected horizon.</p></section>
+      <section><h3>1. Head &amp; energy price</h3><p>Total dynamic head is well depth (zero for surface water) plus operating pressure × 2.31 ft/psi. The state electricity or natural-gas price is converted to a cost per brake-kWh using the motor (90%) or gas-engine (27% × 302 kWh/Mcf) efficiency.</p></section>
+      <section><h3>2. Baseline &amp; upgrades</h3><p>Applied water is the net crop water requirement divided by each system's application efficiency. Pumping energy = applied water × acres × head × 0.0853 kWh per ac-in-ft ÷ pump efficiency × cost per brake-kWh. Annual net savings = energy savings − the change in O&amp;M versus the current system (+ crop revenue gain when irrigating a rainfed field).</p></section>
+      <section><h3>3. NPV, replacement &amp; salvage</h3><p>Energy savings are discounted as a growing annuity at the energy escalation rate; O&amp;M and revenue changes as level annuities. Investment is cost × acres × (1 − cost share). Systems that wear out before the horizon are replaced, and remaining life at the end is credited as salvage.</p></section>
+      <section><h3>4. Screens &amp; ranking</h3><p>An upgrade must be more efficient than the current system, use no more water than the scenario allows, and have positive NPV. Remaining candidates are ranked by NPV. Priority is High when payback is within half the horizon.</p></section>
+      <p class="method-source">Model of record: {{ source.workbook }} (SHA-256 {{ source.sha256[:12] }}…).</p>
     </div>
     <div class="modal-foot"><button class="primary-btn" type="button" onclick="closeMethodology()">Understood</button></div>
   </div>
@@ -455,7 +538,10 @@
       <a href="#" onclick="return false;">Contact</a>
       <a href="#" onclick="return false;">Resources</a>
     </div>
-    <div class="footer-copy">Engineering financial modeling · EIA · USDA NASS · © 2026 WISE</div>
+    <div class="footer-copy">
+      <div>EIA · USDA NASS · USDA ERS · © 2026 WISE</div>
+      <div class="footer-source" title="SHA-256 {{ source.sha256 }}">Model: {{ source.workbook }} · SHA-256 <code>{{ source.sha256[:12] }}</code> · exported {{ source.generated_at[:10] }}</div>
+    </div>
   </div>
 </footer>
 
@@ -467,387 +553,364 @@
 </nav>
 
 <script>
-// ─────────────────────────────────────────────────────────
-// UI NAVIGATION
-// ─────────────────────────────────────────────────────────
+const NO_IRR = 'No Irrigation System';
+const DEFAULTS = {operating_pressure_psi: '40', pump_efficiency: '0.75'};   // INPUTS!H25 / H26
+
+// ── Navigation ──────────────────────────────────────────────
 function showScreen(name) {
   document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
-  const target = document.getElementById(`screen-${name}`);
-  if (target) target.classList.add('active');
-
+  document.getElementById(`screen-${name}`)?.classList.add('active');
   ['home','evaluation','results'].forEach(key => {
     document.getElementById(`nav-${key}`)?.classList.toggle('active', key === name);
     document.getElementById(`mobile-${key}`)?.classList.toggle('active', key === name);
   });
   window.scrollTo({top: 0, behavior: 'smooth'});
 }
-
 function openMethodology() { document.getElementById('methodology-modal').style.display = 'flex'; }
 function closeMethodology() { document.getElementById('methodology-modal').style.display = 'none'; }
-function modalBackdropClose(event) { if (event.target.id === 'methodology-modal') closeMethodology(); }
+function modalBackdropClose(e) { if (e.target.id === 'methodology-modal') closeMethodology(); }
+
+// ── Helpers ─────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const val = id => ($(id)?.disabled ? '' : ($(id)?.value ?? '').trim());
+const enc = s => encodeURIComponent(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const isNum = x => typeof x === 'number' && isFinite(x);
+const money = n => isNum(n) ? (n < 0 ? '−$' : '$') + Math.abs(Math.round(n)).toLocaleString() : '—';
+const signedMoney = n => isNum(n) ? (n < 0 ? '−$' : n > 0 ? '+$' : '$') + Math.abs(Math.round(n)).toLocaleString() : '—';
+const pct0 = x => isNum(x) ? Math.round(x * 100) + '%' : '—';
+const pct1 = x => isNum(x) ? (x * 100).toFixed(1) + '%' : '—';
+const fixed = (x, d = 1) => isNum(x) ? x.toFixed(d) : '';
+const payback = p => isNum(p) ? p.toFixed(1) + ' yrs' : (p || '—');
+
+function setMsg(id, text, tone) {
+  const box = $(id);
+  if (!text) { box.style.display = 'none'; return; }
+  box.querySelector('span:last-child').textContent = text;
+  box.className = 'data-msg' + (tone ? ' ' + tone : '');
+  box.style.display = 'flex';
+}
+const levelTone = level => level === 'NO DATA' ? 'warn' : level === 'OVERRIDE' ? 'override' : '';
+function setLevel(id, level) {
+  const tag = $(id);
+  tag.textContent = level || 'AUTO';
+  tag.className = 'atag' + (level === 'NO DATA' ? ' atag-warn' : level === 'OVERRIDE' ? ' atag-override' : '');
+}
+
+// ── Form state ──────────────────────────────────────────────
+const FIELDS = [...document.querySelectorAll('[data-input]')].map(el => el.id);
+
+function collect() {
+  const out = {};
+  FIELDS.forEach(id => {
+    let v = val(id);
+    if (v !== '' && $(id).hasAttribute('data-percent')) v = String(parseFloat(v) / 100);
+    out[id] = v === '' ? null : v;
+  });
+  return out;
+}
+
+let resolveTimer = null, resolveSeq = 0, lastResolve = null, attempted = false;
+function scheduleResolve() { clearTimeout(resolveTimer); resolveTimer = setTimeout(resolve, 120); }
+
+async function resolve() {
+  const seq = ++resolveSeq;
+  try {
+    const r = await fetch('/resolve', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(collect())});
+    const data = await r.json();
+    if (seq !== resolveSeq) return;          // a newer request superseded this one
+    lastResolve = data;
+    renderResolve(data);
+  } catch (e) {
+    $('readiness-text').textContent = 'Could not reach the WISE server.';
+  }
+}
+
+function applyVisibility() {
+  const current = val('current_system'), src = $('irrigation_source').value;
+  const irrigated = $('irrigated').value, scenario = $('water_scenario').value;
+  const noIrr = current === NO_IRR;
+
+  // Surface water: no well (INPUTS!H24 "Leave blank for surface water")
+  const surface = src === 'Surface Water';
+  $('well_depth_ft').disabled = surface;
+  if (surface) $('well_depth_ft').value = '';
+  $('well-field').classList.toggle('muted-field', surface);
+  $('well-hint').textContent = surface ? 'Not applicable for surface water.' : 'Depth to pumping water level.';
+  $('surface-water-row').style.display = (src === 'Surface Water' || src === 'Surface + Groundwater') ? 'grid' : 'none';
+
+  // No Irrigation System path
+  $('rainfed-field').style.display = noIrr ? '' : 'none';
+  $('gross-label').textContent = noIrr ? 'Planned irrigation water available' : 'Gross irrigation applied';
+  const grossOn = irrigated === 'Yes' || noIrr;     // Lists!U2 / INPUTS!AE68
+  $('gross_irrigation_in').disabled = !grossOn;
+  if (!grossOn) $('gross_irrigation_in').value = '';
+  $('gross-hint').textContent = grossOn
+    ? (noIrr ? 'Water you plan to apply once irrigated.' : 'Gross water pumped and applied per year.')
+    : 'Requires Irrigated? = Yes.';
+  $('irrigated-hint').textContent = !irrigated
+    ? 'Select Yes or No to indicate whether this field is currently irrigated.'
+    : irrigated === 'Yes' ? 'Irrigated field - enter gross irrigation applied.'
+    : 'Rainfed field - irrigation entries are ignored.';
+
+  // Pumping fields become optional only for No Irrigation with no upgrade picked (INPUTS_UI!G18)
+  const pumpExempt = noIrr && !val('upgrade_scenario');
+  document.querySelectorAll('[data-pump-req]').forEach(el => el.style.visibility = pumpExempt ? 'hidden' : 'visible');
+  $('system-note').textContent = pumpExempt
+    ? 'No current system selected - pumping-plant fields become required once you choose an upgrade scenario in Section 4.'
+    : 'Engineering inputs feed the pumping-energy and upgrade calculations.';
+
+  $('custom-reduction-field').style.display = scenario === 'Custom' ? '' : 'none';
+  if (scenario !== 'Custom') $('custom_reduction').value = '';
+}
+
+function renderResolve(d) {
+  const a = d.auto, m = d.messages;
+
+  // Section 1 — climate (INPUTS!E9:E13)
+  const c = a.climate;
+  $('climate-strip').innerHTML = c
+    ? `<span>Rain <b>${fixed(c.precip)}</b> in</span><span>Temp <b>${fixed(c.temp)}</b> °F</span><span>ET <b>${fixed(c.et)}</b> in</span><span>AWS <b>${fixed(c.aws, 2)}</b> in</span>${isNum(a.slope) ? `<span>Slope <b>${fixed(a.slope, 2)}</b>%</span>` : ''}`
+    : (val('county') ? 'No climate data for this county' : 'Select a state and county');
+
+  // Section 2 — energy and head
+  $('energy_price').value = isNum(a.energy_price)
+    ? (a.energy_unit === '$/kWh' ? `$${a.energy_price.toFixed(4)} /kWh` : `$${a.energy_price.toFixed(2)} /Mcf`) : '';
+  $('energy-hint').textContent = isNum(a.energy_price)
+    ? `${a.energy_label} · $${a.cost_per_brake_kwh.toFixed(4)} per brake-kWh`
+    : (val('state') && val('energy_source') ? `No ${val('energy_source').toLowerCase()} price for ${val('state')}.` : 'Select state and energy source.');
+  $('tdh').value = isNum(a.tdh) ? a.tdh.toFixed(1) + ' ft' : '';
+  $('current-eff-hint').textContent = isNum(a.current_efficiency)
+    ? `Application efficiency ${pct0(a.current_efficiency)} (SystemTech).` : 'Options come from SystemTech (Role = Current).';
+
+  // Section 3 — yield / price / cost with data-level messages
+  document.querySelectorAll('[data-yield-unit]').forEach(el => el.textContent = a.yield_unit ? `(${a.yield_unit})` : '');
+  $('yield_auto').value = isNum(a.yield_auto) ? fixed(a.yield_auto) : '';
+  setLevel('yield-level', a.yield_level);
+  setMsg('yield-msg', m.yield, levelTone(a.yield_level) || (/older|No recent/.test(m.yield) ? 'warn' : ''));
+  $('price-unit').textContent = a.price_unit ? `(${a.price_unit})` : '';
+  $('price_auto').value = isNum(a.price_auto) ? '$' + a.price_auto.toFixed(3) : '';
+  setLevel('price-level', a.price_level);
+  setMsg('price-msg', m.price, levelTone(a.price_level) || (/older|No recent/.test(m.price) ? 'warn' : ''));
+  $('prod_cost_auto').value = isNum(a.prod_cost_auto) ? money(a.prod_cost_auto) : '';
+  setLevel('prod-level', a.prod_cost_level);
+  setMsg('prod-msg', val('crop') ? m.prod_cost + ' Shown for context; not used in the NPV.' : null, levelTone(a.prod_cost_level));
+
+  $('current_net').value = isNum(a.current_net_irrigation) ? fixed(a.current_net_irrigation) : '';
+  $('current-net-hint').textContent = isNum(a.current_efficiency) && val('current_system') !== NO_IRR
+    ? `Net = gross × ${pct0(a.current_efficiency)} application efficiency for ${val('current_system')}.`
+    : 'Net = gross × current system efficiency.';
+  setMsg('net-msg', m.net_water, m.gross_net_warning ? 'danger' : '');
+
+  // Section 4 — scenario and cost
+  $('scenario-hint').textContent = m.scenario;
+  $('available_water').value = isNum(a.available_water) ? fixed(a.available_water) + ' in/ac/yr' : '';
+  $('available-hint').textContent = isNum(a.available_water)
+    ? `${fixed(parseFloat(val('gross_irrigation_in')))} gross × (1 − ${pct0(a.reduction)}) = ${fixed(a.available_water)} in/ac/yr.`
+    : 'Calculates once gross/planned irrigation is set.';
+  $('upgrade_cost').value = isNum(a.upgrade_cost) ? money(a.upgrade_cost) : '';
+  setLevel('cost-level', val('custom_upgrade_cost') ? 'OVERRIDE' : 'AUTO');
+  setMsg('cost-msg', val('upgrade_scenario') ? m.upgrade_cost : null, val('custom_upgrade_cost') ? 'override' : '');
+  $('same-system-hint').textContent = m.same_system || 'Options come from SystemTech (Role = Upgrade).';
+  $('same-system-hint').classList.toggle('hint-warn', !!m.same_system);
+  const h = val('horizon_yr'), dr = val('discount_rate'), es = val('energy_escalation');
+  $('finance-hint').textContent = h && dr
+    ? `Cash flows compared over ${h} years at a ${(dr * 100).toFixed(1)}% discount rate, with energy prices escalating ${es ? (es * 100).toFixed(1) : '—'}%/yr.`
+    : 'Set analysis horizon and discount rate to enable the investment comparison.';
+
+  // Required-field gate (INPUTS!AE52:AE81)
+  const ready = d.ready;
+  const box = $('readiness');
+  box.className = 'readiness ' + (ready ? 'ready' : 'missing');
+  box.querySelector('.material-symbols-outlined').textContent = ready ? 'task_alt' : 'warning';
+  $('readiness-text').textContent = d.readiness;
+  $('missing-list').innerHTML = d.missing.map(x =>
+    `<li><button type="button" onclick="focusField('${x.field}')">${esc(x.label)}</button></li>`).join('');
+  // INPUTS_UI!B2 lists everything missing; only show it once the user has tried to calculate
+  $('intro-msg').textContent = (attempted || ready) ? d.missing_message
+    : 'Configure the farm, irrigation system, crop, and scenario - then compare upgrade options.';
+  $('calcbtn').classList.toggle('gated', !ready);
+  $('calcbtn').title = ready ? '' : d.readiness;
+  if (attempted) markMissing(d.missing);
+}
+
+function focusField(id) {
+  const el = $(id);
+  if (!el) return;
+  el.scrollIntoView({behavior: 'smooth', block: 'center'});
+  setTimeout(() => el.focus({preventScroll: true}), 250);
+}
+
+function markMissing(missing) {
+  document.querySelectorAll('#wise-form .field.invalid').forEach(f => f.classList.remove('invalid'));
+  missing.forEach(x => $(x.field)?.closest('.field')?.classList.add('invalid'));
+}
+
+async function onStateChange() {
+  const state = $('state').value, countyEl = $('county');
+  countyEl.innerHTML = `<option value="">${state ? 'Loading…' : 'Select a state first'}</option>`;
+  countyEl.disabled = true;
+  if (!state) return;
+  const data = await (await fetch(`/get_counties?state=${enc(state)}`)).json();
+  if ($('state').value !== state) return;
+  countyEl.innerHTML = '<option value="">Select county...</option>' +
+    data.counties.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  countyEl.disabled = false;
+}
+
+FIELDS.forEach(id => {
+  const el = $(id);
+  const handler = async () => {
+    if (id === 'state') await onStateChange();
+    applyVisibility();
+    scheduleResolve();
+  };
+  el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', handler);
+});
 
 function resetForm() {
-  document.querySelectorAll('#screen-evaluation input:not([readonly])').forEach(input => {
-    if (input.id === 'op_pressure') input.value = 40;
-    else if (input.id === 'well_depth') input.value = 200;
-    else if (input.id === 'pump_efficiency') input.value = 75;
-    else if (input.id === 'net_crop_water') input.value = 18;
-    else if (input.id === 'incentive_pct') input.value = 0;
-    else if (input.id === 'horizon') input.value = 25;
-    else if (input.id === 'discount_rate') input.value = 4;
-    else if (input.id === 'energy_escalation') input.value = 4;
-    else if (input.type !== 'range') input.value = '';
-  });
-  ['state','county','current_system','irrigation_source','crop','water_scenario','pump_capacity','system_age'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.value = '';
-  });
-  document.getElementById('energy_source').value = 'Electricity';
-  document.getElementById('county').disabled = true;
-  document.getElementById('county').innerHTML = '<option value="">Select county...</option>';
-  document.getElementById('blend-row').style.display = 'none';
-  document.getElementById('surface-water-row').style.display = 'none';
-  const wellDepth = document.getElementById('well_depth');
-  wellDepth.disabled = false;
-  document.getElementById('well-row').style.opacity = '1';
-  document.getElementById('well-hint').textContent = 'Groundwater only';
-  clearAuto(); hideErr(); clearInvalid();
+  FIELDS.forEach(id => { $(id).value = DEFAULTS[id] ?? ''; });
+  $('county').innerHTML = '<option value="">Select a state first</option>';
+  $('county').disabled = true;
+  attempted = false;
+  hideErr();
+  document.querySelectorAll('#wise-form .field.invalid').forEach(f => f.classList.remove('invalid'));
+  applyVisibility();
+  resolve();
 }
 
 function startNewEvaluation() {
   resetForm();
-  document.getElementById('results').style.display = 'none';
-  document.getElementById('empty').style.display = 'flex';
+  $('results').style.display = 'none';
+  $('empty').style.display = 'flex';
   showScreen('evaluation');
 }
 
-// ─────────────────────────────────────────────────────────
-// STATE MANAGEMENT — preserved Flask data flow
-// ─────────────────────────────────────────────────────────
-function onStateChange() {
-  const state = v('state');
-  const countyEl = document.getElementById('county');
-  countyEl.innerHTML = '<option value="">Loading...</option>';
-  countyEl.disabled = true;
-  clearAuto();
-  if (!state) return;
-
-  fetch(`/get_counties?state=${enc(state)}`)
-    .then(r => r.json())
-    .then(data => {
-      countyEl.innerHTML = '<option value="">Select county...</option>';
-      data.counties.forEach(c => {
-        const o = document.createElement('option');
-        o.value = c; o.textContent = c;
-        countyEl.appendChild(o);
-      });
-      countyEl.disabled = false;
-      updateEnergyRate(data);
-    });
-}
-
-function onCountyChange() { fetchCountyData(); }
-function onCropChange() { fetchCountyData(); }
-
-function onEnergySourceChange() {
-  const state = v('state');
-  if (!state) return;
-  fetch(`/get_counties?state=${enc(state)}`)
-    .then(r => r.json())
-    .then(data => updateEnergyRate(data));
-}
-
-function updateEnergyRate(data) {
-  const energySrc = v('energy_source') || 'Electricity';
-  const state = v('state');
-  if (energySrc === 'Natural Gas') {
-    if (data.ng_price) {
-      const kwhEquiv = (data.ng_price / 293).toFixed(5);
-      document.getElementById('energy_rate').value = kwhEquiv;
-      document.getElementById('energy-rate-source').textContent =
-        `Natural Gas · ${state} · $${data.ng_price}/mcf → $${kwhEquiv}/kWh equiv.`;
-    } else {
-      document.getElementById('energy_rate').value = '';
-      document.getElementById('energy-rate-source').textContent = 'Natural gas price not available for this state';
-    }
-  } else {
-    if (data.elec_rate) {
-      document.getElementById('energy_rate').value = data.elec_rate;
-      document.getElementById('energy-rate-source').textContent =
-        `Electricity · EIA March 2026 · ${state} · $${data.elec_rate}/kWh`;
-    }
-  }
-}
-
-function onIrrigationSourceChange() {
-  const src = v('irrigation_source');
-  const wellDepth = document.getElementById('well_depth');
-  const wellRow = document.getElementById('well-row');
-  const blendRow = document.getElementById('blend-row');
-  const surfaceWaterRow = document.getElementById('surface-water-row');
-  blendRow.style.display = 'none';
-  surfaceWaterRow.style.display = (src === 'Surface Water' || src === 'Groundwater + Surface Water') ? 'grid' : 'none';
-
-  if (src === 'Surface Water') {
-    wellDepth.value = 0;
-    wellDepth.disabled = true;
-    wellRow.style.opacity = '0.55';
-    document.getElementById('well-hint').textContent = 'Not applicable for surface water';
-  } else if (src === 'Groundwater + Surface Water') {
-    wellDepth.disabled = false;
-    wellRow.style.opacity = '1';
-    if (!wellDepth.value || wellDepth.value === '0') wellDepth.value = 200;
-    document.getElementById('well-hint').textContent = 'Well depth for the groundwater portion';
-    blendRow.style.display = 'block';
-    updateBlendLabel();
-  } else {
-    wellDepth.disabled = false;
-    wellRow.style.opacity = '1';
-    if (!wellDepth.value || wellDepth.value === '0') wellDepth.value = 200;
-    document.getElementById('well-hint').textContent = 'Groundwater only';
-  }
-}
-
-function updateBlendLabel() {
-  const pct = Number(v('gw_blend') || 50);
-  document.getElementById('blend-label').textContent = `${pct}% groundwater · ${100 - pct}% surface water`;
-}
-
-function fetchCountyData() {
-  const state = v('state'), county = v('county'), crop = v('crop');
-  const energySrc = v('energy_source') || 'Electricity';
-  if (!state) return;
-
-  fetch(`/get_county_data?state=${enc(state)}&county=${enc(county)}&crop=${enc(crop)}&energy_source=${enc(energySrc)}`)
-    .then(r => r.json())
-    .then(data => {
-      updateEnergyRate({elec_rate: data.elec_rate, ng_price: data.ng_price});
-
-      if (data.crop_price) {
-        document.getElementById('crop_price').value = data.crop_price;
-        document.getElementById('price-source').textContent = data.data_sources.price;
-      }
-      if (data.prod_cost) document.getElementById('prod_cost').value = data.prod_cost;
-
-      const yi = data.yield_info;
-      const countyYieldEl = document.getElementById('county_yield');
-      const yieldMsgEl = document.getElementById('yield-msg');
-      const yieldMsgText = document.getElementById('yield-msg-text');
-      const yieldInputEl = document.getElementById('yield_per_acre');
-      const yieldHint = document.getElementById('yield-hint');
-      const yieldSourceEl = document.getElementById('county-yield-source');
-
-      if (yi && yi.available) {
-        countyYieldEl.value = yi.value;
-        yieldSourceEl.textContent = `NASS ${yi.status} · ${yi.unit} · ${county} County`;
-        yieldMsgEl.style.display = 'none';
-        yieldInputEl.value = yi.value;
-        yieldHint.textContent = 'County data auto-filled. Override here if needed.';
-      } else if (yi && !yi.available && county && crop) {
-        countyYieldEl.value = '';
-        yieldSourceEl.textContent = 'No county data available';
-        yieldMsgEl.style.display = 'flex';
-        yieldMsgText.textContent = yi.message;
-        yieldInputEl.value = '';
-        yieldHint.textContent = 'Required — enter your best estimate';
-      } else {
-        countyYieldEl.value = '';
-        yieldMsgEl.style.display = 'none';
-      }
-    });
-}
-
-function clearAuto() {
-  ['energy_rate','crop_price','prod_cost','county_yield'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.value = '';
-  });
-  document.getElementById('yield-msg').style.display = 'none';
-}
-
-// ─────────────────────────────────────────────────────────
-// VALIDATION — red outline on incomplete required fields
-// ─────────────────────────────────────────────────────────
-function markInvalid(ids) {
-  ids.forEach(id => {
-    document.getElementById(id)?.closest('.field')?.classList.add('invalid');
-  });
-}
-function clearInvalid() {
-  document.querySelectorAll('#screen-evaluation .field.invalid').forEach(f => f.classList.remove('invalid'));
-}
-document.querySelectorAll('#screen-evaluation select, #screen-evaluation input').forEach(el => {
-  ['input', 'change'].forEach(evt => el.addEventListener(evt, () => {
-    if (v(el.id)) el.closest('.field')?.classList.remove('invalid');
-  }));
-});
-
-// ─────────────────────────────────────────────────────────
-// CALCULATION — payload preserved for app.py
-// ─────────────────────────────────────────────────────────
-function runCalculation() {
-  const customYield = v('yield_per_acre');
-  const countyYield = v('county_yield');
-  const finalYield = customYield || countyYield;
-
-  const inputs = {
-    state: v('state'),
-    county: v('county'),
-    current_system: v('current_system'),
-    irrigation_source: v('irrigation_source') || 'Groundwater',
-    gw_blend: parseFloat(v('gw_blend') || 100) / 100,
-    surface_water_distance: v('surface_water_distance') || null,
-    energy_source: v('energy_source') || 'Electricity',
-    crop: v('crop'),
-    acres: v('acres'),
-    yield_per_acre: finalYield,
-    water_scenario: v('water_scenario'),
-    well_depth: v('well_depth') || 200,
-    op_pressure: v('op_pressure') || 40,
-    pump_efficiency: parseFloat(v('pump_efficiency') || 75) / 100,
-    pump_capacity: v('pump_capacity') || null,
-    system_age: v('system_age') || null,
-    net_crop_water: v('net_crop_water') || 18,
-    crop_price_override: null,
-    prod_cost_override: v('prod_cost_override') || null,
-    incentive_pct: parseFloat(v('incentive_pct') || 0) / 100,
-    horizon: v('horizon') || 25,
-    discount_rate: parseFloat(v('discount_rate') || 4) / 100,
-    energy_escalation: parseFloat(v('energy_escalation') || 4) / 100,
-  };
-
-  clearInvalid();
-  const missing = ['state','county','current_system','irrigation_source','energy_source','crop','acres','water_scenario'].filter(f => !inputs[f]);
-  if (missing.length) {
-    markInvalid(missing);
-    showErr('Please fill in: ' + missing.join(', '));
-    return;
-  }
-  if (!finalYield || parseFloat(finalYield) <= 0) {
-    markInvalid(['yield_per_acre']);
-    showErr('Please enter a yield value (bu/ac) — county data unavailable, use custom yield field.');
+// ── Calculation ─────────────────────────────────────────────
+async function runCalculation() {
+  attempted = true;
+  if (lastResolve && !lastResolve.ready) {
+    markMissing(lastResolve.missing);
+    $('intro-msg').textContent = lastResolve.missing_message;
+    showErr('Missing required inputs: ' + lastResolve.missing.map(x => x.label).join(', '));
     return;
   }
   hideErr();
-
-  const btn = document.querySelector('.calcbtn');
+  const btn = $('calcbtn');
   btn.innerHTML = '<span class="material-symbols-outlined spin">progress_activity</span> Calculating...';
   btn.disabled = true;
-
-  fetch('/calculate', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(inputs)
-  })
-  .then(async r => {
+  try {
+    const r = await fetch('/calculate', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(collect())});
     const data = await r.json();
-    if (!r.ok) throw new Error(data.error || 'Calculation failed');
-    return data;
-  })
-  .then(data => {
-    if (data.error) { showErr(data.error); return; }
-    displayResults(data, inputs);
+    if (!data.ready) {
+      markMissing(data.missing || []);
+      showErr(data.missing_message || data.error || 'Calculation failed');
+      return;
+    }
+    displayResults(data);
     showScreen('results');
-  })
-  .catch(err => showErr(err.message || 'Calculation failed. Please try again.'))
-  .finally(() => {
+  } catch (e) {
+    showErr('Calculation failed. Please try again.');
+  } finally {
     btn.innerHTML = '<span class="material-symbols-outlined">analytics</span> Calculate My Recommendation';
     btn.disabled = false;
-  });
-}
-
-// ─────────────────────────────────────────────────────────
-// DISPLAY RESULTS — backend values preserved, presentation upgraded
-// ─────────────────────────────────────────────────────────
-function displayResults(data, inputs) {
-  document.getElementById('empty').style.display = 'none';
-  document.getElementById('results').style.display = 'block';
-
-  const km = data.key_metrics;
-  const b = data.baseline;
-  const horizon = inputs.horizon || 25;
-
-  document.getElementById('recval').textContent = data.recommended_system;
-  document.getElementById('recrat').textContent = data.rationale;
-  const pb = document.getElementById('pribadge');
-  pb.textContent = data.priority;
-  pb.className = 'pribadge pri-' + data.priority.toLowerCase();
-
-  document.getElementById('m-savings').textContent = money(km.annual_net_savings);
-  document.getElementById('m-water').textContent = km.water_saved_pct + '%';
-  document.getElementById('m-payback').textContent = km.payback_label;
-  document.getElementById('m-npv').textContent = signedMoney(km.npv);
-  document.getElementById('m-npv-sub').textContent = `${horizon}-year horizon`;
-
-  const worthText = document.getElementById('worth-text');
-  const worthBadge = document.getElementById('worth-badge');
-  if (km.npv > 0) {
-    worthText.textContent = 'Worth the investment';
-    worthBadge.className = 'worth-badge worth-positive';
-    worthBadge.querySelector('.material-symbols-outlined').textContent = 'trending_up';
-  } else {
-    worthText.textContent = 'Keep current system';
-    worthBadge.className = 'worth-badge worth-negative';
-    worthBadge.querySelector('.material-symbols-outlined').textContent = 'remove_circle';
   }
-
-  const climateStr = b.et
-    ? `ET ${b.et} in · Precip ${b.precip} in · Temp ${b.temp}°F · AWS ${b.aws} in`
-    : 'Climate data not available';
-
-  document.getElementById('baseline-box').innerHTML = `
-    <div class="baseline-row"><span>Current system</span><strong>${b.system}</strong></div>
-    <div class="baseline-row"><span>Water source</span><strong>${b.irrigation_src}${b.gw_blend_pct ? ' · ' + b.gw_blend_pct + '% GW' : ''}</strong></div>
-    <div class="baseline-row"><span>Applied water</span><strong>${b.applied_water} in/ac</strong></div>
-    <div class="baseline-row"><span>Total dynamic head</span><strong>${b.tdh} ft</strong></div>
-    <div class="baseline-row"><span>Annual energy</span><strong>${money(b.energy_cost)}</strong></div>
-    <div class="baseline-row"><span>Energy rate</span><strong>$${b.energy_rate}/kWh equiv.</strong></div>
-    <div class="baseline-row"><span>Crop price</span><strong>$${b.crop_price}/bu</strong></div>
-    <div class="baseline-climate"><span class="material-symbols-outlined">cloud</span><span>${climateStr}<br><small>${b.climate_source}</small></span></div>`;
-
-  const tbody = document.getElementById('ctbody');
-  tbody.innerHTML = '';
-  data.results.forEach(r => {
-    const tr = document.createElement('tr');
-    if (r.recommended) tr.classList.add('recrow');
-    tr.innerHTML = `
-      <td><span class="rbadge r${Math.min(r.rank,3)}">${r.rank_label}</span></td>
-      <td><div class="system-name">${r.recommended ? '<span class="star material-symbols-outlined fill">stars</span>' : ''}<strong>${r.system}</strong>${r.recommended ? '<small>Best economic option</small>' : ''}</div></td>
-      <td>${r.efficiency_pct}%</td>
-      <td>${r.applied_water} in/ac</td>
-      <td class="${r.water_saved_pct > 0 ? 'pos' : r.water_saved_pct < 0 ? 'neg' : ''}">${r.water_saved_pct}%</td>
-      <td class="${r.annual_net_savings > 0 ? 'pos' : 'neg'}">${signedMoney(r.annual_net_savings)}</td>
-      <td>${money(r.net_investment)}</td>
-      <td>${r.payback_label}</td>
-      <td class="npv-cell ${r.npv > 0 ? 'pos' : 'neg'}">${signedMoney(r.npv)}</td>`;
-    tbody.appendChild(tr);
-  });
-
-  document.getElementById('notebox').innerHTML = `
-    <span class="material-symbols-outlined">info</span>
-    <span><strong>Model context</strong><br>${inputs.acres} acres · ${inputs.county} County, ${inputs.state} · ${inputs.crop} · ${b.irrigation_src} · ${b.energy_src} · ${horizon}-yr horizon · ${parseFloat(inputs.discount_rate)*100}% discount.<br><small>Production cost is shown for context only and is not used in the NPV ranking.</small></span>`;
-
-  renderComparisonCharts(data.results);
 }
 
-// =========================================================
-// Results charts — replaces renderComparisonCharts() and
-// renderHorizontalBarChart() in your <script> block.
-// Paste over both functions; keep everything else as-is.
-// =========================================================
+function displayResults(d) {
+  $('empty').style.display = 'none';
+  $('results').style.display = 'block';
+  const inp = collect(), a = d.auto, b = d.baseline, km = d.key_metrics;
+  const horizon = inp.horizon_yr;
+  const hasRec = !!km;
 
-const SYSTEM_ORDER = ['Center Pivot', 'Improved Sprinkler', 'Drip'];
+  $('recval').textContent = d.recommended_system;
+  $('status-line').textContent = d.status;
+  $('recrat').textContent = d.rationale;
+  const pb = $('pribadge');
+  pb.textContent = d.priority;
+  pb.className = 'pribadge pri-' + d.priority.toLowerCase();
 
-const pctLabel     = v => (v > 0 ? '+' : '') + Number(v).toFixed(1) + '%';
-const pctTick      = v => v === 0 ? '0%' : (v > 0 ? '+' : '\u2212') + Math.abs(Math.round(v)) + '%';
-const moneyShort   = v => {
-  const a = Math.abs(v);
-  const s = v < 0 ? '\u2212' : (v > 0 ? '+' : '');
-  return a >= 1000 ? `${s}$${Math.round(a / 1000)}k` : `${s}$${Math.round(a)}`;
+  const worth = $('worth-badge');
+  worth.className = 'worth-badge ' + (hasRec ? 'worth-positive' : 'worth-negative');
+  worth.querySelector('.material-symbols-outlined').textContent = hasRec ? 'trending_up' : 'remove_circle';
+  $('worth-text').textContent = hasRec ? 'Worth the investment' : 'Keep current system';
+
+  $('m-npv-label').textContent = `${horizon}-year NPV`;
+  $('npv-chart-title').textContent = `${horizon}-Year NPV by System`;
+  $('m-npv').textContent = hasRec ? signedMoney(km.npv) : '—';
+  $('m-npv-sub').textContent = hasRec ? `${d.recommended_system} · ${(inp.discount_rate * 100).toFixed(1)}% discount` : 'No upgrade has a positive NPV';
+  $('m-savings').textContent = hasRec ? signedMoney(km.annual_net_savings) : '—';
+  $('m-water').textContent = hasRec ? pct1(km.water_saved_pct) : '—';
+  $('m-water-sub').textContent = hasRec ? `${fixed(km.current_water)} → ${fixed(km.upgraded_water)} in/ac/yr` : 'vs current system';
+  $('m-invest').textContent = hasRec ? money(km.investment) : '—';
+  $('m-invest-sub').textContent = `after ${pct0(parseFloat(inp.incentive))} cost share`;
+  $('m-payback').textContent = hasRec ? (isNum(d.payback) ? d.payback.toFixed(1) : d.payback) : 'Not recovered';
+
+  // Comparison table (RESULTS!B14:J18)
+  const tbody = $('ctbody');
+  const baseRow = `
+    <tr class="baserow">
+      <td><span class="rbadge r3">Base</span></td>
+      <td><div class="system-name"><strong>${esc(b.system)}</strong><small>Current system · ${pct0(b.eff)}</small></div></td>
+      <td>${fixed(b.applied_water)} in</td><td>—</td><td>${money(b.energy_cost)}</td>
+      <td>—</td><td>—</td><td>—</td><td>Baseline</td><td>Baseline</td>
+    </tr>`;
+  tbody.innerHTML = baseRow + d.systems.map(r => {
+    const rank = typeof r.rank === 'number' ? r.rank : null;
+    return `
+    <tr class="${r.recommended ? 'recrow' : ''}">
+      <td><span class="rbadge ${rank ? 'r' + Math.min(rank, 3) : 'rnone'}">${rank ?? '—'}</span></td>
+      <td><div class="system-name">${r.recommended ? '<span class="star material-symbols-outlined fill">stars</span>' : ''}<strong>${esc(r.system)}</strong><small>${pct0(r.eff)} efficient${isNum(r.life) ? ' · ' + r.life + '-yr life' : ''}</small></div></td>
+      <td>${fixed(r.applied_water)} in</td>
+      <td class="${r.water_saved_pct > 0 ? 'pos' : r.water_saved_pct < 0 ? 'neg' : ''}">${pct1(r.water_saved_pct)}</td>
+      <td>${money(r.energy_cost)}</td>
+      <td class="${r.annual_net_savings > 0 ? 'pos' : 'neg'}">${signedMoney(r.annual_net_savings)}</td>
+      <td>${money(r.investment)}</td>
+      <td class="npv-cell ${r.npv > 0 ? 'pos' : 'neg'}">${signedMoney(r.npv)}</td>
+      <td>${payback(r.payback)}</td>
+      <td><span class="decision decision-${r.decision.replace(/\s+/g, '-').toLowerCase()}">${esc(r.decision)}</span></td>
+    </tr>`;
+  }).join('');
+
+  const c = a.climate;
+  const cap = d.systems[0]?.water_cap;
+  $('baseline-box').innerHTML = `
+    <div class="baseline-row"><span>County</span><strong>${esc(inp.county)}, ${esc(inp.state)}</strong></div>
+    <div class="baseline-row"><span>Crop</span><strong>${esc(inp.crop)} · ${fixed(a.yield)} ${esc(a.yield_unit || '')} @ $${a.price.toFixed(3)}</strong></div>
+    <div class="baseline-row"><span>Current system</span><strong>${esc(b.system)}</strong></div>
+    <div class="baseline-row"><span>Irrigation source</span><strong>${esc(inp.irrigation_source)}</strong></div>
+    <div class="baseline-row"><span>Current water use</span><strong>${fixed(b.applied_water)} in/ac/yr</strong></div>
+    <div class="baseline-row"><span>Water constraint</span><strong>${esc(inp.water_scenario)} · cap ${fixed(cap)} in</strong></div>
+    <div class="baseline-row"><span>Total dynamic head</span><strong>${fixed(a.tdh)} ft</strong></div>
+    <div class="baseline-row"><span>Energy</span><strong>${esc(inp.energy_source)} · ${a.energy_unit === '$/kWh' ? '$' + a.energy_price.toFixed(4) + '/kWh' : '$' + a.energy_price.toFixed(2) + '/Mcf'}</strong></div>
+    <div class="baseline-row"><span>Baseline energy cost</span><strong>${money(b.energy_cost)}/yr</strong></div>
+    <div class="baseline-row"><span>Upgrade scenario</span><strong>${esc(inp.upgrade_scenario)} · ${money(a.upgrade_cost)}/ac</strong></div>
+    <div class="baseline-climate"><span class="material-symbols-outlined">cloud</span><span>${c
+      ? `ET ${fixed(c.et)} in · Rain ${fixed(c.precip)} in · Temp ${fixed(c.temp)}°F · AWS ${fixed(c.aws, 2)} in`
+      : 'Climate data not available'}</span></div>`;
+
+  // Results_calc!V7 is a helper cell; meaningless when the field was rainfed (no current water use)
+  const shortfall = isNum(d.shortfall) && d.shortfall > 0 && b.system !== NO_IRR
+    ? `<br>Best water-saving option is ${esc(d.best_water_option)} (${pct1(d.max_water_savings)}), ${pct1(d.shortfall)} short of the ${pct0(d.required_reduction)} reduction required.` : '';
+  const warn = d.messages.gross_net_warning ? `<br><span class="note-warn">${esc(d.messages.gross_net_warning)}</span>` : '';
+  $('notebox').innerHTML = `
+    <span class="material-symbols-outlined">info</span>
+    <span><strong>${esc(d.note)}</strong>${shortfall}${warn}<br><small>${esc(inp.acres)} acres · ${horizon}-yr horizon · ${(inp.discount_rate * 100).toFixed(1)}% discount · ${(inp.energy_escalation * 100).toFixed(1)}%/yr energy escalation. Production cost is shown for context only and is not used in the NPV.</small></span>`;
+
+  renderComparisonCharts(d.systems);
+}
+
+// ── Charts ──────────────────────────────────────────────────
+const pctLabel   = v => (v > 0 ? '+' : '') + Number(v).toFixed(1) + '%';
+const pctTick    = v => v === 0 ? '0%' : (v > 0 ? '+' : '−') + Math.abs(Math.round(v)) + '%';
+const moneyShort = v => {
+  const x = Math.abs(v), s = v < 0 ? '−' : (v > 0 ? '+' : '');
+  return x >= 1000 ? `${s}$${Math.round(x / 1000)}k` : `${s}$${Math.round(x)}`;
 };
 
-// Round the axis out to a clean step so bars never touch the edge.
 function niceDomain(values) {
-  let min = Math.min(0, ...values);
-  let max = Math.max(0, ...values);
+  let min = Math.min(0, ...values), max = Math.max(0, ...values);
   if (min === 0 && max === 0) return [0, 1];
   const step = Math.pow(10, Math.floor(Math.log10(max - min))) / 2;
   min = Math.floor(min / step) * step;
@@ -855,97 +918,62 @@ function niceDomain(values) {
   return [min, max === min ? min + step : max];
 }
 
-function renderComparisonCharts(results) {
-  const rows = [...results].sort((a, b) => {
-    const ia = SYSTEM_ORDER.indexOf(a.system);
-    const ib = SYSTEM_ORDER.indexOf(b.system);
-    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
-  });
-
-  renderHorizontalBarChart('npv-chart', rows, 'npv', 'npv', signedMoney, moneyShort);
-  renderHorizontalBarChart('water-savings-chart', rows, 'water_saved_pct', 'water', pctLabel, pctTick);
+function renderComparisonCharts(systems) {
+  renderHorizontalBarChart('npv-chart', systems.map(r => ({system: r.system, value: r.npv})), 'npv', signedMoney, moneyShort);
+  renderHorizontalBarChart('water-savings-chart', systems.map(r => ({system: r.system, value: r.water_saved_pct * 100})), 'water', pctLabel, pctTick);
 }
 
-function renderHorizontalBarChart(containerId, results, field, kind, formatValue, formatTick) {
-  const container = document.getElementById(containerId);
-  if (!container) return;
+function renderHorizontalBarChart(containerId, rows, kind, formatValue, formatTick) {
+  const container = $(containerId);
+  rows = rows.filter(r => isFinite(r.value));
+  if (!rows.length) { container.innerHTML = '<p class="hchart-empty">Run an evaluation to see this comparison.</p>'; return; }
 
-  const rows = (results || []).filter(r => isFinite(Number(r[field])));
-  if (!rows.length) {
-    container.innerHTML = '<p class="hchart-empty">Run an evaluation to see this comparison.</p>';
-    return;
-  }
-
-  const [lo, hi] = niceDomain(rows.map(r => Number(r[field])));
-  const span    = (hi - lo) || 1;
-  const pct     = v => ((v - lo) / span) * 100;
-  const zeroPct = pct(0);
-  const ticks   = [...new Set([lo, 0, hi])].sort((a, b) => a - b);
-
-  const gridLines = ticks
-    .filter(t => t !== 0)
-    .map(t => `<span class="hbar-grid" style="left:${pct(t)}%"></span>`)
-    .join('');
+  const [lo, hi] = niceDomain(rows.map(r => r.value));
+  const span = (hi - lo) || 1;
+  const pos = v => ((v - lo) / span) * 100;
+  const zero = pos(0);
+  const ticks = [...new Set([lo, 0, hi])].sort((x, y) => x - y);
+  const grid = ticks.filter(t => t !== 0).map(t => `<span class="hbar-grid" style="left:${pos(t)}%"></span>`).join('');
 
   container.innerHTML = `
     <div class="hchart-plot">
       ${rows.map(r => {
-        const value    = Number(r[field]);
-        const valuePct = pct(value);
-        const left     = Math.min(zeroPct, valuePct);
-        const width    = Math.abs(valuePct - zeroPct);
-
-        const sign = value === 0 ? 'neutral' : (value < 0 ? 'negative' : 'positive');
-        const tone = value === 0 ? 'zero' : `${kind}-${sign}`;
-        // Label sits inside the bar when there's room, otherwise just past its end.
-        const place = width >= 28
-          ? (value < 0 ? 'in-left'  : 'in-right')
-          : (value < 0 ? 'out-left' : 'out-right');
-
+        const vp = pos(r.value), left = Math.min(zero, vp), width = Math.abs(vp - zero);
+        const sign = r.value === 0 ? 'neutral' : (r.value < 0 ? 'negative' : 'positive');
+        const tone = r.value === 0 ? 'zero' : `${kind}-${sign}`;
+        const place = width >= 28 ? (r.value < 0 ? 'in-left' : 'in-right') : (r.value < 0 ? 'out-left' : 'out-right');
         return `
         <div class="hbar-row">
-          <div class="hbar-name">${r.system}</div>
-          <div class="hbar-area" title="${r.system}: ${formatValue(value)}">
-            ${gridLines}
-            <span class="hbar-zero" style="left:${zeroPct}%"></span>
+          <div class="hbar-name">${esc(r.system)}</div>
+          <div class="hbar-area" title="${esc(r.system)}: ${formatValue(r.value)}">
+            ${grid}
+            <span class="hbar-zero" style="left:${zero}%"></span>
             <div class="hbar ${tone}" data-width="${width}" style="left:${left}%">
-              <span class="hbar-value ${place} ${sign}">${formatValue(value)}</span>
+              <span class="hbar-value ${place} ${sign}">${formatValue(r.value)}</span>
             </div>
           </div>
         </div>`;
       }).join('')}
-
       <div class="hchart-scale">
         <div></div>
         <div class="hchart-scale-track">
-          ${ticks.map((t, i) => `
-            <span class="hchart-tick${i === 0 ? ' first' : ''}${i === ticks.length - 1 ? ' last' : ''}"
-                  style="left:${pct(t)}%">${formatTick(t)}</span>`).join('')}
+          ${ticks.map((t, i) => `<span class="hchart-tick${i === 0 ? ' first' : ''}${i === ticks.length - 1 ? ' last' : ''}" style="left:${pos(t)}%">${formatTick(t)}</span>`).join('')}
         </div>
       </div>
     </div>`;
-
-  requestAnimationFrame(() => {
-    container.querySelectorAll('.hbar').forEach(bar => {
-      bar.style.width = bar.dataset.width + '%';
-    });
-  });
+  requestAnimationFrame(() => container.querySelectorAll('.hbar').forEach(bar => { bar.style.width = bar.dataset.width + '%'; }));
 }
-
-
-const v = id => document.getElementById(id)?.value;
-const enc = s => encodeURIComponent(s);
-const fmt = n => Number(n).toLocaleString();
-const money = n => '$' + Math.abs(Number(n)).toLocaleString();
-const signedMoney = n => Number(n) >= 0 ? '+$' + Number(n).toLocaleString() : '−$' + Math.abs(Number(n)).toLocaleString();
 
 function showErr(msg) {
-  const el = document.getElementById('errmsg');
-  el.innerHTML = `<span class="material-symbols-outlined">error</span><span>${msg}</span>`;
+  const el = $('errmsg');
+  el.innerHTML = `<span class="material-symbols-outlined">error</span><span>${esc(msg)}</span>`;
   el.style.display = 'flex';
-  el.scrollIntoView({behavior:'smooth', block:'center'});
+  el.scrollIntoView({behavior: 'smooth', block: 'center'});
 }
-function hideErr() { document.getElementById('errmsg').style.display = 'none'; }
+function hideErr() { $('errmsg').style.display = 'none'; }
+
+applyVisibility();
+resolve();
 </script>
 </body>
 </html>

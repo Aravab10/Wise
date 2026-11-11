@@ -347,17 +347,7 @@ button{cursor:pointer}
   .hero-content h1{font-size:34px}.page-intro h1{font-size:25px}.form-actions{flex-direction:column-reverse}.form-actions button{width:100%}.recommendation-copy{padding:22px}.recommendation-title-row h2{font-size:25px}.table-wrap{margin:0}.results-card{border-radius:14px}
 }
 
-/* Footer links */
-.footer-links a,
-.site-footer a {
-  color: #000;
-}
-
-.footer-links a:hover,
-.site-footer a:hover {
-  color: #000;
-}
-
+/* Footer links — light on the dark-green footer (were #000, i.e. invisible) */
 .footer-links{
   display:flex;
   align-items:center;
@@ -365,15 +355,17 @@ button{cursor:pointer}
   gap:34px;
 }
 
-.footer-links a{
-  color:#000;
+.footer-links a,
+.site-footer a{
+  color:var(--primary-soft);
   text-decoration:none;
   font-size:12px;
   font-weight:600;
 }
 
-.footer-links a:hover{
-  opacity:.65;
+.footer-links a:hover,
+.site-footer a:hover{
+  color:#fff;
 }
 
 /* ================= WISE Results Charts ================= */
@@ -599,3 +591,48 @@ button{cursor:pointer}
 .learn-more-tab:focus-visible{outline:2px solid var(--primary-soft);outline-offset:3px}
 
 .hero-content .primary-cta{order:1}
+/* ── v6 form additions ─────────────────────────────────────── */
+.climate-strip{min-height:42px;display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;padding:8px 12px;border:1px solid #b9d7c4;border-radius:9px;background:#edf7f0;color:var(--primary-2);font-size:10px}
+.climate-strip b{font-weight:800}
+.unit-tag{font-weight:500;color:#7b847e}
+.atag-warn{background:var(--gold)}
+.atag-override{background:var(--blue)}
+.muted-field{opacity:.55}
+.hint-warn{color:var(--gold);font-weight:600}
+.data-msg{display:none;align-items:flex-start;gap:8px;padding:9px 12px;border-radius:9px;background:#f2f7f4;border:1px solid #d7e5da;color:#3f5a4a;font-size:10px;line-height:1.55;margin:-4px 0 14px}
+.data-msg .material-symbols-outlined{font-size:16px;flex:none}
+.data-msg.warn{background:#fff8e7;border-color:#ead18d;color:#705514}
+.data-msg.override{background:#eef7ff;border-color:#c8e4f7;color:#34566a}
+.data-msg.danger{background:#fff0ed;border-color:#efb7ad;color:var(--danger);font-weight:600}
+.readiness{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;font-size:10px;font-weight:800;letter-spacing:.02em}
+.readiness .material-symbols-outlined{font-size:18px}
+.readiness.missing{background:#fff8e7;border:1px solid #ead18d;color:#705514}
+.readiness.ready{background:var(--primary-soft-2);border:1px solid #b9d7c4;color:var(--primary-2)}
+.missing-list{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:5px;max-height:220px;overflow:auto}
+.missing-list button{border:1px solid #ead18d;background:#fffdf6;color:#705514;border-radius:999px;padding:3px 8px;font-size:9px;font-weight:600}
+.missing-list button:hover{background:#fff1c9}
+.side-card h3{margin-top:4px}
+
+/* ── v6 results additions ──────────────────────────────────── */
+.status-line{margin:14px 0 0;font-size:11px;font-weight:700;color:var(--primary-soft)}
+.metric-grid-4{grid-template-columns:repeat(4,1fr)}
+.ctable tr.baserow td{background:#f8f9f6;color:#69726c}
+.rnone{background:transparent;color:#9aa59e;border:1px dashed #c8cfca}
+.decision{display:inline-block;border-radius:999px;padding:3px 8px;font-size:8px;font-weight:800;background:var(--surface-mid);color:#5b645e}
+.decision-candidate{background:var(--primary-soft);color:#123d25}
+.decision-economically-unattractive{background:var(--danger-soft);color:#6d2018}
+.decision-fails-water-constraint{background:var(--gold-soft);color:#664b00}
+.decision-not-eligible{background:var(--surface-high);color:#69726c}
+.note-warn{color:var(--danger);font-weight:600}
+.footer-copy{text-align:right;line-height:1.7}
+.footer-source{color:#9fbaa9}
+.footer-source code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:8px;color:var(--primary-soft)}
+.method-source{font-size:10px;color:var(--muted);margin:4px 0 0}
+
+@media(max-width:1050px){.metric-grid-4{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:780px){
+  .footer-inner{flex-direction:column;align-items:flex-start}
+  .footer-copy{text-align:left}
+}
+@media(max-width:480px){.metric-grid-4{grid-template-columns:1fr}}
+.calcbtn.gated{opacity:.55;box-shadow:none}
